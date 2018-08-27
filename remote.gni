@@ -1,0 +1,5 @@
+# define remote variables
+
+declare_args() {
+  is_enable_remote = true
+}

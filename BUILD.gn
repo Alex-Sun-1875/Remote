@@ -1,0 +1,7 @@
+# For Test
+
+executable("remote_main") {
+  include_dirs = []
+  sources = [ "main.cc" ]
+  deps = [ "//base:base" ]
+}
