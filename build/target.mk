@@ -14,7 +14,6 @@ generate:
 	if [ ! -d $(BUILD_DIR) ]; then \
 		gn gen $(BUILD_DIR); \
 	else	\
-		rm -rf $(ROOT_DIR)/out; \
 		gn gen $(BUILD_DIR); \
 	fi
 	@echo "================= Generate Build File End ==================";
