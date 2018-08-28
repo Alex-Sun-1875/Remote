@@ -6,5 +6,6 @@ executable("remote_main") {
   deps = [
     "//base:base",
     "//content/child:child",
+    "//ipc:ipc",
   ]
 }
