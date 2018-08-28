@@ -3,5 +3,8 @@
 executable("remote_main") {
   include_dirs = []
   sources = [ "main.cc" ]
-  deps = [ "//base:base" ]
+  deps = [
+    "//base:base",
+    "//content/child:child",
+  ]
 }
