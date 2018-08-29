@@ -12,13 +12,19 @@ generate:
 	@echo "================ Generate Build File Start =================";
 	@cd $(ROOT_DIR); \
 	if [ ! -d $(BUILD_DIR) ]; then \
-		gn gen $(BUILD_DIR); \
+		if [ "Release" == "$(BUILD_TARGET)" ]; then \
+			gn gen $(BUILD_DIR) --args=$(RELEASE_BUILD_PARAM); \
+		else \
+			gn gen $(BUILD_DIR); \
+		fi \
 	else	\
 		gn gen $(BUILD_DIR); \
 	fi
 	@echo "================= Generate Build File End ==================";
 
 configure:
+	@echo "============= Configure Build Parameter Start ==============";
+	@echo "============== Configure Build Parameter End ===============";
 
 prebuild:
 
