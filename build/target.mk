@@ -30,7 +30,7 @@ prebuild:
 
 build_target:
 	@echo "======================= Build Start ========================";
-	#ninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg) $(MAKE_OPTIONS)
+	@#ninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg) $(MAKE_OPTIONS)
 	autoninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg)
 	@echo "======================== Build End =========================";
 

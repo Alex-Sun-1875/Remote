@@ -2,7 +2,6 @@ HOST_NAME=$(shell hostname)
 RELEASE_BUILD_PARAM="is_debug = false  \
 						 is_component_build = true \
 						 symbol_level = 0 \
-						 use_jumbo_build=true \
 						 enable_nacl = false \
 						 remove_webcore_debug_symbols = true \
 						 cc_wrapper=\"ccache\""
