@@ -81,6 +81,11 @@ public:
 
   bool Send(IPC::Message* message) override;
 
+  ServiceManagerConnection* GetServiceManagerConnection() override;
+  service_manager::Connector* GetConnector() override;
+
+  scoped_redptr<base::SingleThreadTaskRunner> GetIOTaskRunner();
+
   IPC::SyncChannel* channel() { return channel_.get(); }
   IPC::MessageRouter* GetRouter();
 
@@ -100,8 +105,10 @@ public:
 
   static ChildThreadImpl* current();
 
+#if 0
 #if defined(OS_ANDROID)
   static void ShutDownThread();
+#endif
 #endif
 
 protected:
@@ -119,7 +126,7 @@ protected:
   // void OnAssociatedInterfaceRequest(const std::string& interface_name, mojo::ScopedInterfaceEndPointHandle handle) override;
   void OnChannelConnected(int32_t peer_id) override;
   bool on_channel_error_called() const { return on_channel_error_called_; }
-  // bool IsInBrowserProcess() const;
+  bool IsInBrowserProcess() const;
 
 private:
   class ChildThreadMessageRouter : public IPC::MessageRouter {
@@ -172,8 +179,9 @@ struct ChildThreadImpl::Options {
 
   bool auto_start_services_mannager_connection;
   bool connect_to_browser;
-  scoped_redptr<IPC::MessageFilter*> startup_filters;
-  // mojo::OutGoingInvitation* mojo_invatation;
+  scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner;
+  std::vector<IPC::MessageFilter*> startup_filters;
+  mojo::OutGoingInvitation* mojo_invatation;
   std::string in_process_services_request_tooken;
   scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner;
 
