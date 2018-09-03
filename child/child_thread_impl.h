@@ -83,7 +83,7 @@ public:
   ServiceManagerConnection* GetServiceManagerConnection() override;
   service_manager::Connector* GetConnector() override;
 
-  scoped_redptr<base::SingleThreadTaskRunner> GetIOTaskRunner();
+  scoped_redptr<base::SingleThreadTaskRunner> GetIOTaskRunner() override;
 
   IPC::SyncChannel* channel() { return channel_.get(); }
   IPC::MessageRouter* GetRouter();
@@ -122,7 +122,8 @@ protected:
 
   // IPC::Listener implementation
   bool OnMessageReceived(const IPC::Message& msg) override;
-  void OnAssociatedInterfaceRequest(const std::string& interface_name, mojo::ScopedInterfaceEndPointHandle handle) override;
+  void OnAssociatedInterfaceRequest(const std::string& interface_name,
+                                    mojo::ScopedInterfaceEndPointHandle handle) override;
   void OnChannelConnected(int32_t peer_id) override;
   bool on_channel_error_called() const { return on_channel_error_called_; }
   bool IsInBrowserProcess() const;
@@ -149,22 +150,28 @@ private:
 
   void GetRouter(int32_t routing_id, blink::mojom::AssociatedInterfaceProviderAssociatedRequest request) override;
 
+  void GetAssociatedInterface(const std::string& name,
+                              blink::mojom::AssociatedInterfaceAssociatedRequest request) override;
+
+private:
+
+  std::unique_ptr<mojo::core::ScopedIPCSupport> mojo_ipc_support_;
+  std::unique_ptr<ServiceManagerConnection> service_manager_connection_;
+
+  mojo::BindingSet<mojom::ChildControl> child_control_bindings_;
+  mojo::AssociatedBinding<mojo::RouteProvider> route_provider_binding_;
+  mojo::AssociatedBindingSet<blink::mojom::AssociatedInterfaceProvider, int32_t>
+      associated_interface_provider_bindings_;
+  mojom::RouteProviderAssociatedPtr remote_route_provider_;
+
   std::unique_ptr<IPC::SyncChannel> channel_;
-
   scoped_refptr<IPC::SyncMessageFilter> sync_message_filter_;
-
   scoped_refptr<ThreadSafeSender> thread_safe_sender_;
-
   ChildThreadMessageRouter router_;
-
   bool on_channel_error_called_;
-
   scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner;
-
   std::unique_ptr<base::WeakPtrFactory<ChildThreadImpl>> channel_connected_factory_;
-
   scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner_;
-
   base::WeakPtrFactory<ChildThreadImpl> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(ChildThreadImpl);
@@ -176,12 +183,12 @@ struct ChildThreadImpl::Options {
 
   class Builder;
 
-  bool auto_start_services_mannager_connection;
+  bool auto_start_service_mannager_connection;
   bool connect_to_browser;
   scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner;
   std::vector<IPC::MessageFilter*> startup_filters;
   mojo::OutGoingInvitation* mojo_invatation;
-  std::string in_process_services_request_tooken;
+  std::string in_process_service_request_token;
   scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner;
 
 private:
@@ -197,6 +204,7 @@ class ChildThreadImpl::Options::Builder {
     Builder& ConnectToBrowser(bool connect_to_browser);
     Builder& AddStartupFilter(IPC::MessageFilter* filter);
     Builder& IPCTaskRunner(scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner);
+
     Options Build();
 
   private:

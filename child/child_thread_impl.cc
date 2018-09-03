@@ -6,9 +6,9 @@
 
 #include "base/base_switchs.h"
 #include "base/command_line.h"
-// #include "base/debug/alias.h"
-// #include "base/debug/leak_annotations.h"
-// #include "base/debug/profiler.h"
+#include "base/debug/alias.h"
+#include "base/debug/leak_annotations.h"
+#include "base/debug/profiler.h"
 #include "base/lazy_instance.h"
 #include "base/locations.h"
 #include "base/logging.h"
@@ -17,6 +17,7 @@
 #include "base/message_loop/timer_slack.h"
 // #include "base/metrics/field_trial.h"
 // #include "base/metrics/histogram_macros.h"
+#include "base/no_destructor.h"
 #include "base/optional.h"
 #include "base/process/process.h"
 #include "base/process/process_handle.h"
@@ -30,9 +31,10 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/timer/elapsed_timer.h"
 // #include "base/trace_event/memory_dump_manager.h"
+// #include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
 // #include "components/tracing/child/child_trace_message_filter.h"
-#include "content/child/child_histogram_fetcher_impl.h"
+// #include "content/child/child_histogram_fetcher_impl.h"
 
 #include "child_process.h"
 #include "thread_safe_sender.h"
@@ -91,9 +93,9 @@ base::LazyInstance<base::ThreadLocalPointer<ChildThread>>::DestructorAtExit
     defined(MEMORY_SANITIZER) || defined(THREAD_SANITIZER) || \
     defined(UNDERFINED_SANITIZER)
 
-class WaitAndExitDelefate : public base::PlatformThread::Delegate {
+class WaitAndExitDelegate : public base::PlatformThread::Delegate {
   public:
-    explicit WaitAndExitDelefate(base::TimeDelta duration)
+    explicit WaitAndExitDelegate(base::TimeDelta duration)
       : duration_(duration) {}
 
     void ThreadMain() override {
@@ -107,11 +109,11 @@ class WaitAndExitDelefate : public base::PlatformThread::Delegate {
     // 为只读属性（只读：不能出现在“=”的左边，但在类中仍可以用一个指针来修改其
     // 值。） 所以不可以直接在类的构造函数中初始化const 的成员
 
-    DISALLOW_COPY_AND_ASSIGN(WaitAndExitDelefate);
+    DISALLOW_COPY_AND_ASSIGN(WaitAndExitDelegate);
 };
 
 bool CreateWaitAndExitThread(base::TimeDelta duration) {
-  std::unique_ptr<WaitAndExitDelefate> delegate(new WaitAndExitDelefate(duration));
+  std::unique_ptr<WaitAndExitDelegate> delegate(new WaitAndExitDelegate(duration));
 
   const bool thread_created = base::PlatformThread::CreateNonJoinable(0, delegate.get());
 
@@ -119,14 +121,14 @@ bool CreateWaitAndExitThread(base::TimeDelta duration) {
     return false;
   }
 
-  WaitAndExitDelefate* leaking_delefate = delegate.release();
-  ANNOTATE_LEAKING_OBJECT_PTR(leaking_delefate);
-  ignore_result(leaking_delefate);
+  WaitAndExitDelegate* leaking_delegate = delegate.release();
+  ANNOTATE_LEAKING_OBJECT_PTR(leaking_delegate);
+  ignore_result(leaking_delegate);
   return true
 }
 #endif
 
-class SuicideOnChannelErrorFilter : IPC::MessageFilter {
+class SuicideOnChannelErrorFilter : public IPC::MessageFilter {
   public:
     void OnChannelError() override {
 
@@ -185,8 +187,10 @@ class ChannelBootstrapFilter : public ConnectionFilter {
                          const std::string& interface_name,
                          mojo::ScopedMessagePipeHandle* interface_pipe,
                          service_manager::Connector* connector) override {
+#if 0
       if (source_info.identity.name() != mojom::kBrowserServiceName)
         return;
+#endif
 
       if (interface_name == IPC::mojom::ChannelBootstrap::Name_) {
         DCHECK(bootstrap_.is_valid());
@@ -281,7 +285,7 @@ bool ChildThreadImpl::ChildThreadMessageRouter::RouteMessage(const IPC::Message&
 }
 
 ChildThreadImpl::ChildThreadImpl()
-    : // route_provider_binding_(this),
+    : route_provider_binding_(this),
       route_(this),
       channel_connected_factory_(new base::WeakPtrFactory<ChildThreadImpl>(this)),
       weak_factory_(this) {
@@ -307,7 +311,7 @@ scoped_refptr<base::SingleThreadTaskRunner> ChildThreadImpl::GetIOTaskRunner() {
 }
 
 void ChildThreadImpl::ConnectChannel() {
-  // DCHECK(service_manager_connection_);
+  DCHECK(service_manager_connection_);
   IPC::mojom::ChannelBootstrapPtr bootstrap;
   mojo::ScopedMessagePipeHandle handle = mojo::MakeRequest(&bootstrap).PassMessagePipe();
   service_manager_connection_->AddConnectionFilter(
@@ -332,8 +336,8 @@ void ChildThreadImpl::Init(const Options& options) {
   mojo::ScopedMessagePipeHandle service_request_pipe;
 
   if (!IsInBrowserProcess()) {
-    mojo_ipc_support_.reset(new mojo::core::ScopedIPCSport(
-        GetIOTaskRunner(), mojo::core::ScopedIPCSupport::ShutdownPolicy::Fast));
+    mojo_ipc_support_.reset(new mojo::core::ScopedIPCSupport(
+        GetIOTaskRunner(), mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST));
     // c++14中将包含一个std::optional类，它的功能和用法和boost的optional类似。optional<T>
     // 内部存储空间可能存储了T类型的值也可能没有存储T类型的值，只有当optional被T初始化之后,
     // 这个optional才是有效的，否则是无效的，它实现了未初始化的概念。
@@ -360,8 +364,10 @@ void ChildThreadImpl::Init(const Options& options) {
   sync_message_filter_ = channel_->CreateSyncMessageFilter();
   thread_safe_sender_ = new ThreadSafeSender(main_thread_runner_, sync_message_filter_.get());
   auto registry = std::make_unique<service_manager::BinderRegistry>();
+#if 0
   registry->AddInterface(base::Bind(&ChildHistogramFetcherFactoryImpl::Create),
                          GetIOTaskRunner());
+#endif
   registry->AddInterface(base::Bind(&ChildThreadImpl::OnChildControlRequest, base::Unretained(this)),
                          base::ThreadTaskRunnerHandle::Get());
   GetServiceManagerConnection()->AddConnectionFilter(
