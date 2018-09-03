@@ -19,20 +19,20 @@
 
 // #include "components/variations/child_process_field_trial_syncer.h"
 // #include "content/child/memory/child_memory_coordinator_impl.h"
-// #include "content/common/associated_interfaces.mojom.h"
-// #include "content/common/child_control.mojom.h"
-// #include "content/common/content_export.h"
+#include "content/common/associated_interfaces.mojom.h"
+#include "content/common/child_control.mojom.h"
+#include "content/common/content_export.h"
 
 #include "child_thread.h"
 
 #include "ipc/ipc.mojom.h"
-// #include "ipc/ipc_buildflags.h"
+#include "ipc/ipc_buildflags.h"
 #include "ipc/ipc_platform_file.h"
 #include "ipc/message_router.h"
 
 #include "mojo/public/cpp/bindings/associated_binding.h"
 #include "mojo/public/cpp/bindings/associated_binding_set.h"
-#include "services/tracing/public/cpp/trace_event_agent.h"
+// #include "services/tracing/public/cpp/trace_event_agent.h"
 #include "third_party/blink/public/mojom/associated_interfaces/associated_interfaces.mojom.h"
 
 #if 0
@@ -51,7 +51,7 @@ class SyncMessageFilter;
 
 namespace mojo {
 class OutGoingInvitation;
-namespace {
+namespace core {
 class ScopedIPCSupport;
 } // core
 } // namespace mojo
@@ -65,10 +65,9 @@ class CONTENT_EXPORT ChildThreadImpl
       virtual public ChildThread,
       // private base::FiledTrialList::Observer,
       // public ChildMemoryCoordinatorDelegate,
-      // public mojom::RouteProvider,
-      // public blink::mojom::AssociatedInterfaceProvider,
-      // public mojom::ChildControl
-      public mojom::RouteProvider {
+      public mojom::RouteProvider,
+      public blink::mojom::AssociatedInterfaceProvider,
+      public mojom::ChildControl {
 public:
   struct CONTENT_EXPORT Options;
 
@@ -117,13 +116,13 @@ protected:
   virtual void OnPorcessFinalRelease();
 
   // mojom::ChildControl
-  // void ProcessShutDown() override;
-  // void OnChildControlRequest(mojom::ChildControlRequest);
-  // virtual void OnControlMessageReceived(const IPC::Message& msg);
+  void ProcessShutDown() override;
+  void OnChildControlRequest(mojom::ChildControlRequest);
+  virtual void OnControlMessageReceived(const IPC::Message& msg);
 
   // IPC::Listener implementation
   bool OnMessageReceived(const IPC::Message& msg) override;
-  // void OnAssociatedInterfaceRequest(const std::string& interface_name, mojo::ScopedInterfaceEndPointHandle handle) override;
+  void OnAssociatedInterfaceRequest(const std::string& interface_name, mojo::ScopedInterfaceEndPointHandle handle) override;
   void OnChannelConnected(int32_t peer_id) override;
   bool on_channel_error_called() const { return on_channel_error_called_; }
   bool IsInBrowserProcess() const;
@@ -148,7 +147,7 @@ private:
 
   void EnsureConnected();
 
-  // void GetRouter(int32_t routing_id, blink::mojom::AssociatedInterfaceProviderAssociatedRequest request) override;
+  void GetRouter(int32_t routing_id, blink::mojom::AssociatedInterfaceProviderAssociatedRequest request) override;
 
   std::unique_ptr<IPC::SyncChannel> channel_;
 

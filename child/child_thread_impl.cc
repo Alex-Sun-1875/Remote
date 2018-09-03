@@ -438,7 +438,7 @@ bool ChildThreadImpl::Send(IPC::Message* msg) {
 }
 
 ServiceManagerConnection* ChildThreadImpl::GetServiceManagerConnection() {
-  return service_manager_connection_->GetConnector();
+  return service_manager_connection_.get();
 }
 
 service_manager::Connector* ChildThreadImpl::GetConnector() {
