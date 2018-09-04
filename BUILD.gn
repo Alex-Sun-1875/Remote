@@ -5,7 +5,7 @@ executable("remote_main") {
   sources = [ "main.cc" ]
   deps = [
     "//base:base",
-    "//content/child:child",
+    "child:child_thread_impl",
     "//ipc:ipc",
   ]
 }

@@ -1,12 +1,8 @@
 #include <iostream>
-#include "base/command_line.h"
-#include "base/threading/platform_thread.h"
-
-#include "content/child/child_process.h"
-#include "content/child/child_thread_impl.h"
 
 int main(int argc, char* argv[]) {
   std::cout << "Start A Remote!!!" << std::endl;
+#if 0
   base::PlatformThread::SetName("RemoteMain");
 
   base::CommandLine::Init(argc, argv);
@@ -24,6 +20,7 @@ int main(int argc, char* argv[]) {
                                                          .Build());
   child_process.set_main_thread(child_thread);
   // main_loop.Run();
+#endif
 
   return 0;
 }

@@ -414,7 +414,7 @@ ChildThreadImpl::~ChildThreadImpl() {
   g_lazy_tls.Pointer()->Set(nullptr);
 }
 
-void ChildThreadImpl::ShutDown() {
+void ChildThreadImpl::Shutdown() {
 
 }
 
@@ -506,7 +506,7 @@ ChildThreadImpl* ChildThreadImpl::current() {
   return g_lazy_tls.Pointer()->Get();
 }
 
-void ChildThreadImpl::OnprocessFinalRelease() {
+void ChildThreadImpl::OnProcessFinalRelease() {
   if (on_channel_error_called_)
     return;
 

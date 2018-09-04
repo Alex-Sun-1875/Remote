@@ -8,7 +8,7 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
+#include "base/memory/scoped_refptr.h"
 #include "base/memory/shared_memory.h"
 #include "base/memory/weak_ptr.h"
 //#include "base/metrics/field_trial.h"
@@ -57,6 +57,7 @@ class ScopedIPCSupport;
 } // namespace mojo
 
 namespace content {
+class ServiceManagerConnection;
 class InProcessChildThreadParams;
 class ThreadSafeSender;
 
@@ -75,7 +76,7 @@ public:
   explicit ChildThreadImpl(const Options& options);
   ~ChildThreadImpl() override; // 类的析构函数只有一个,不能够被继承,只能被重写
 
-  virtual void ShutDown();
+  virtual void Shutdown();
   virtual bool ShouldBeDestroyed();
 
   bool Send(IPC::Message* message) override;
@@ -83,7 +84,7 @@ public:
   ServiceManagerConnection* GetServiceManagerConnection() override;
   service_manager::Connector* GetConnector() override;
 
-  scoped_redptr<base::SingleThreadTaskRunner> GetIOTaskRunner() override;
+  scoped_refptr<base::SingleThreadTaskRunner> GetIOTaskRunner() override;
 
   IPC::SyncChannel* channel() { return channel_.get(); }
   IPC::MessageRouter* GetRouter();
@@ -94,7 +95,7 @@ public:
     return sync_message_filter_.get();
   }
 
-  ThreadSafeSender* thread_safe_sender() cpnst {
+  ThreadSafeSender* thread_safe_sender() const {
     return thread_safe_sender_.get();
   }
 
@@ -113,7 +114,7 @@ public:
 protected:
   friend class ChildProcess; // ChildProcess class 可以访问 ChildThreadImpl class 的私有成员
 
-  virtual void OnPorcessFinalRelease();
+  virtual void OnProcessFinalRelease();
 
   // mojom::ChildControl
   void ProcessShutDown() override;
@@ -138,7 +139,7 @@ private:
 
     private:
       IPC::Sender* const sender_;
-  }
+  };
 
   void Init(const Options& options);
 
@@ -171,7 +172,7 @@ private:
   bool on_channel_error_called_;
   scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner;
   std::unique_ptr<base::WeakPtrFactory<ChildThreadImpl>> channel_connected_factory_;
-  scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner_;
+  scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
   base::WeakPtrFactory<ChildThreadImpl> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(ChildThreadImpl);
@@ -189,7 +190,7 @@ struct ChildThreadImpl::Options {
   std::vector<IPC::MessageFilter*> startup_filters;
   mojo::OutGoingInvitation* mojo_invatation;
   std::string in_process_service_request_token;
-  scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner;
+  scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner;
 
 private:
   Options();
@@ -203,7 +204,7 @@ class ChildThreadImpl::Options::Builder {
     Builder& AutoStartServiceManagerConnection(bool auto_start);
     Builder& ConnectToBrowser(bool connect_to_browser);
     Builder& AddStartupFilter(IPC::MessageFilter* filter);
-    Builder& IPCTaskRunner(scoped_redptr<base::SingleThreadTaskRunner> ipc_task_runner);
+    Builder& IPCTaskRunner(scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner);
 
     Options Build();
 
