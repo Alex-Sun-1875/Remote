@@ -41,10 +41,10 @@
 
 // #include "content/common/field_trial_recorder.mojom.h"
 #include "content/common/in_process_child_thread_params.h"
-#include "content/public/common/connection_filter.h"
-#include "content/public/common/content_client.h"
-#include "content/public/common/content_features.h"
-#include "content/public/common/content_switches.h"
+// #include "content/public/common/connection_filter.h"
+// #include "content/public/common/content_client.h"
+// #include "content/public/common/content_features.h"
+// #include "content/public/common/content_switches.h"
 #include "content/public/common/service_manager_connection.h"
 #include "content/public/common/service_names.mojom.h"
 #include "content/public/common/simple_connection_filter.h"
@@ -486,8 +486,8 @@ void ChildThreadImpl::OnAssociatedInterfaceRequest(
 
 void ChildThreadImpl::StartServiceManagerConnection() {
   DCHECK(service_manager_connection_);
-  service_manager_connection_.Start();
-  GetContentClient()->OnServiceManagerConnected(service_manager_connection_.get());
+  service_manager_connection_->Start();
+  // GetContentClient()->OnServiceManagerConnected(service_manager_connection_.get());
 }
 
 bool ChildThreadImpl::OnControlMessageReceived(const IPC::Message& msg) {
