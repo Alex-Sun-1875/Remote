@@ -50,14 +50,13 @@ class SyncMessageFilter;
 } // namespace IPC
 
 namespace mojo {
-class OutGoingInvitation;
+class OutgoingInvitation;
 namespace core {
 class ScopedIPCSupport;
 } // core
 } // namespace mojo
 
 namespace content {
-class ServiceManagerConnection;
 class InProcessChildThreadParams;
 class ThreadSafeSender;
 
@@ -116,15 +115,18 @@ protected:
 
   virtual void OnProcessFinalRelease();
 
+  void StartServiceManagerConnection();
+
   // mojom::ChildControl
-  void ProcessShutDown() override;
+  void ProcessShutdown() override;
   void OnChildControlRequest(mojom::ChildControlRequest);
-  virtual void OnControlMessageReceived(const IPC::Message& msg);
+  virtual bool OnControlMessageReceived(const IPC::Message& msg);
 
   // IPC::Listener implementation
   bool OnMessageReceived(const IPC::Message& msg) override;
   void OnAssociatedInterfaceRequest(const std::string& interface_name,
-                                    mojo::ScopedInterfaceEndPointHandle handle) override;
+                                    mojo::ScopedInterfaceEndpointHandle handle) override;
+  void OnChannelError() override;
   void OnChannelConnected(int32_t peer_id) override;
   bool on_channel_error_called() const { return on_channel_error_called_; }
   bool IsInBrowserProcess() const;
@@ -149,7 +151,7 @@ private:
 
   void EnsureConnected();
 
-  void GetRouter(int32_t routing_id, blink::mojom::AssociatedInterfaceProviderAssociatedRequest request) override;
+  void GetRoute(int32_t routing_id, blink::mojom::AssociatedInterfaceProviderAssociatedRequest request) override;
 
   void GetAssociatedInterface(const std::string& name,
                               blink::mojom::AssociatedInterfaceAssociatedRequest request) override;
@@ -160,7 +162,7 @@ private:
   std::unique_ptr<ServiceManagerConnection> service_manager_connection_;
 
   mojo::BindingSet<mojom::ChildControl> child_control_bindings_;
-  mojo::AssociatedBinding<mojo::RouteProvider> route_provider_binding_;
+  mojo::AssociatedBinding<mojom::RouteProvider> route_provider_binding_;
   mojo::AssociatedBindingSet<blink::mojom::AssociatedInterfaceProvider, int32_t>
       associated_interface_provider_bindings_;
   mojom::RouteProviderAssociatedPtr remote_route_provider_;
@@ -170,7 +172,8 @@ private:
   scoped_refptr<ThreadSafeSender> thread_safe_sender_;
   ChildThreadMessageRouter router_;
   bool on_channel_error_called_;
-  scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner;
+  scoped_refptr<base::SingleThreadTaskRunner> main_thread_runner_;
+  scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner_;
   std::unique_ptr<base::WeakPtrFactory<ChildThreadImpl>> channel_connected_factory_;
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
   base::WeakPtrFactory<ChildThreadImpl> weak_factory_;
@@ -188,7 +191,7 @@ struct ChildThreadImpl::Options {
   bool connect_to_browser;
   scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner;
   std::vector<IPC::MessageFilter*> startup_filters;
-  mojo::OutGoingInvitation* mojo_invatation;
+  mojo::OutgoingInvitation* mojo_invitation;
   std::string in_process_service_request_token;
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner;
 

@@ -12,13 +12,23 @@ namespace base {
 class SingleThreadTaskRunner;
 }
 
+namespace service_manager {
+class Connector;
+}
+
 namespace content {
+
+class ServiceManagerConnection;
 
 class CONTENT_EXPORT ChildThread : public IPC::Sender {
   public:
     static ChildThread* Get();
 
-    ~ChildThread() override { }
+    ~ChildThread() override {}
+
+    virtual ServiceManagerConnection* GetServiceManagerConnection() = 0;
+    virtual service_manager::Connector* GetConnector() = 0;
+    virtual scoped_refptr<base::SingleThreadTaskRunner> GetIOTaskRunner() = 0;
 };
 
 } // namespace content

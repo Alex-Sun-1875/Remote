@@ -4,13 +4,13 @@
 #include <string>
 #include <utility>
 
-#include "base/base_switchs.h"
+#include "base/base_switches.h"
 #include "base/command_line.h"
 #include "base/debug/alias.h"
 #include "base/debug/leak_annotations.h"
 #include "base/debug/profiler.h"
 #include "base/lazy_instance.h"
-#include "base/locations.h"
+#include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
 // #include "base/memory/memory_pressure_listener.h"
@@ -44,7 +44,7 @@
 // #include "content/public/common/connection_filter.h"
 // #include "content/public/common/content_client.h"
 // #include "content/public/common/content_features.h"
-// #include "content/public/common/content_switches.h"
+#include "content/public/common/content_switches.h"
 #include "content/public/common/service_manager_connection.h"
 #include "content/public/common/service_names.mojom.h"
 #include "content/public/common/simple_connection_filter.h"
@@ -78,13 +78,12 @@
 #include "base/posix/global_descriptors.h"
 #include "content/public/common/content_descriptors.h"
 #endif
-#endif
 
 namespace content {
 namespace {
 const int kConnectionTimeoutS = 15;
 
-base::LazyInstance<base::ThreadLocalPointer<ChildThread>>::DestructorAtExit
+base::LazyInstance<base::ThreadLocalPointer<ChildThreadImpl>>::DestructorAtExit
     g_lazy_tls = LAZY_INSTANCE_INITIALIZER;
 
 #if defined(OS_POSIX)
@@ -168,7 +167,7 @@ base::Optional<mojo::IncomingInvitation> InitializeMojoIPCChannel() {
 #if defined(OS_POSIX)
   endpoint = mojo::PlatformChannelEndpoint(mojo::PlatformHandle(
       base::ScopedFD(base::GlobalDescriptors::GetInstance()->Get(
-          service_mannage::kMojoIPCChannel))));
+          service_manager::kMojoIPCChannel))));
 #endif
 
   if (!endpoint.is_valid())
@@ -214,7 +213,7 @@ ChildThread* ChildThread::Get() {
 // 假如用户定义了其他构造函数（比如有参数的，或者参数不同的），那么编译器无论如何就不会再合成默认的构造函数了
 // 因此如果要使用无参数版本，用户必须显示的定义一个无参版本的构造函数
 ChildThreadImpl::Options::Options()
-    : auto_start_services_mannager_connection(true),
+    : auto_start_service_mannager_connection(true),
       connect_to_browser(false) {}
 
 // 在函数声明后加上”=default;”，就可将该函数声明为defaulted函数，编译器将为显式声明的defaulted函数自动生成函数体
@@ -229,15 +228,15 @@ ChildThreadImpl::Options::Builder&
 ChildThreadImpl::Options::Builder::InBrowserProcess(
     const InProcessChildThreadParams& params) {
   options_.browser_process_io_runner = params.io_runner();
-  options_.in_process_services_request_tooken = params.services_request_token();
-  options_.mojo_invatation = params.mojo_invatation();
+  options_.in_process_service_request_token = params.service_request_token();
+  options_.mojo_invitation = params.mojo_invitation();
 
   return *this;
 }
 
 ChildThreadImpl::Options::Builder&
 ChildThreadImpl::Options::Builder::AutoStartServiceManagerConnection(bool auto_start) {
-  options_.auto_start_services_mannager_connection = auto_start;
+  options_.auto_start_service_mannager_connection = auto_start;
 
   return *this;
 }
@@ -286,18 +285,18 @@ bool ChildThreadImpl::ChildThreadMessageRouter::RouteMessage(const IPC::Message&
 
 ChildThreadImpl::ChildThreadImpl()
     : route_provider_binding_(this),
-      route_(this),
+      router_(this),
       channel_connected_factory_(new base::WeakPtrFactory<ChildThreadImpl>(this)),
       weak_factory_(this) {
-  Init(Options::Builder::Build());
+  Init(Options::Builder().Build());
 }
 
 ChildThreadImpl::ChildThreadImpl(const Options& options)
-    : // route_provider_binding_(this),
-      route_(this),
+    : route_provider_binding_(this),
+      router_(this),
       browser_process_io_runner_(options.browser_process_io_runner),
       channel_connected_factory_(new base::WeakPtrFactory<ChildThreadImpl>(this)),
-      ipc_task_runner(options.ipc_task_runner),
+      ipc_task_runner_(options.ipc_task_runner),
       weak_factory_(this) {
   Init(options);
 }
@@ -326,8 +325,8 @@ void ChildThreadImpl::ConnectChannel() {
 
 void ChildThreadImpl::Init(const Options& options) {
   g_lazy_tls.Pointer()->Set(this);
-  on_channel_error_called = false;
-  main_thread_runner = base::ThreadTaskRunnerHandle::Get();
+  on_channel_error_called_ = false;
+  main_thread_runner_ = base::ThreadTaskRunnerHandle::Get();
 
   channel_ = IPC::SyncChannel::Create(this, ChildProcess::current()->io_task_runner(),
                                       ipc_task_runner_ ? ipc_task_runner_ : base::ThreadTaskRunnerHandle::Get(),
@@ -351,8 +350,8 @@ void ChildThreadImpl::Init(const Options& options) {
       service_request_pipe = invitation->ExtractMessagePipe(services_request_token);
     }
   } else {
-    service_request_pipe = options.mojo_invatation->ExtractMessagePipe(
-        options.in_process_service_request_tooken);
+    service_request_pipe = options.mojo_invitation->ExtractMessagePipe(
+        options.in_process_service_request_token);
   }
 
   if (service_request_pipe.is_valid()) {
@@ -371,7 +370,7 @@ void ChildThreadImpl::Init(const Options& options) {
   registry->AddInterface(base::Bind(&ChildThreadImpl::OnChildControlRequest, base::Unretained(this)),
                          base::ThreadTaskRunnerHandle::Get());
   GetServiceManagerConnection()->AddConnectionFilter(
-      std::make_unique<SimpleConectionFilter>(std::move(registry)));
+      std::make_unique<SimpleConnectionFilter>(std::move(registry)));
 
   // omit something
 
@@ -386,7 +385,7 @@ void ChildThreadImpl::Init(const Options& options) {
 
   ConnectChannel();
 
-  if (options.auto_start_services_mannager_connection &&
+  if (options.auto_start_service_mannager_connection &&
       service_manager_connection_) {
     StartServiceManagerConnection();
   }
@@ -404,7 +403,7 @@ void ChildThreadImpl::Init(const Options& options) {
 
   main_thread_runner_->PostDelayedTask(FROM_HERE,
                                        base::BindOnce(&ChildThreadImpl::EnsureConnected,
-                                                      channel_connected_factory_.GetWeakPtr()),
+                                                      channel_connected_factory_->GetWeakPtr()),
                                        base::TimeDelta::FromSeconds(connection_timeout));
 }
 
@@ -418,7 +417,7 @@ void ChildThreadImpl::Shutdown() {
 
 }
 
-void ChildThreadImpl::ShouldBeDestroyed() {
+bool ChildThreadImpl::ShouldBeDestroyed() {
   return true;
 }
 
@@ -498,7 +497,7 @@ void ChildThreadImpl::ProcessShutdown() {
   base::RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
-void ChildThreadImpl::OnChildControlRequest(mojo::ChildControlRequest request) {
+void ChildThreadImpl::OnChildControlRequest(mojom::ChildControlRequest request) {
   child_control_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -515,10 +514,10 @@ void ChildThreadImpl::OnProcessFinalRelease() {
 
 void ChildThreadImpl::EnsureConnected() {
   VLOG(0) << "ChildThreadImpl::EnsureConnected()";
-  base::Porcess::TerminateCurrentProcessImmediately(0);
+  base::Process::TerminateCurrentProcessImmediately(0);
 }
 
-void ChildThreadImpl::GetRouter(int32_t routing_id,
+void ChildThreadImpl::GetRoute(int32_t routing_id,
                                 blink::mojom::AssociatedInterfaceProviderAssociatedRequest request) {
   associated_interface_provider_bindings_.AddBinding(this, std::move(request), routing_id);
 }
@@ -526,7 +525,7 @@ void ChildThreadImpl::GetRouter(int32_t routing_id,
 void ChildThreadImpl::GetAssociatedInterface(const std::string& name,
                                              blink::mojom::AssociatedInterfaceAssociatedRequest request) {
   int32_t routing_id = associated_interface_provider_bindings_.dispatch_context();
-  Listener* route = route_.GetRouter(routing_id);
+  Listener* route = router_.GetRoute(routing_id);
   if (route)
     route->OnAssociatedInterfaceRequest(name, request.PassHandle());
 }
