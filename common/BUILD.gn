@@ -1,0 +1,367 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("features.gni")
+import("//build/buildflag_header.gni")
+import("//build/config/features.gni")
+import("//ipc/features.gni")
+import("//mojo/public/tools/bindings/mojom.gni")
+import("//tools/ipc_fuzzer/ipc_fuzzer.gni")
+if (is_mac) {
+  import("//build/config/mac/mac_sdk.gni")
+}
+
+# For feature flags internal to content. See content/public/common:features
+# for feature flags that clients of contents need to know about.
+buildflag_header("buildflags") {
+  header = "buildflags.h"
+
+  flags = [
+    "USE_EXTERNAL_POPUP_MENU=$use_external_popup_menu",
+    "ALLOW_CRITICAL_MEMORY_PRESSURE_HANDLING_IN_FOREGROUND=$allow_critical_memory_pressure_handling_in_foreground",
+  ]
+}
+
+source_set("common") {
+  # Targets external to content should always link to the public API.
+  # In addition, targets outside of the content component (shell and tests)
+  # must not link to this because it will duplicate the code in the component
+  # build.
+  visibility = [ "//content/*",
+                 "//remote/child/*",
+  ]
+
+  sources = [
+    #"child_process_host_impl.cc",
+    #"child_process_host_impl.h",
+    "content_export.h",
+    "in_process_child_thread_params.h",
+    "in_process_child_thread_params.cc",
+  ]
+
+  configs += [
+    "//content:content_implementation",
+    "//build/config:precompiled_headers",
+    "//build/config/compiler:no_size_t_to_int_warning",
+  ]
+
+  public_deps = [
+    ":mojo_bindings",
+    "//ipc",
+    "//third_party/blink/public/common",
+    "//ui/accessibility",
+  ]
+  deps = [
+    ":buildflags",
+    "//base",
+    "//base/third_party/dynamic_annotations",
+    "//build/util:webkit_version",
+    "//components/discardable_memory/common",
+    "//components/services/filesystem/public/interfaces",
+    "//components/tracing",
+    "//components/tracing:startup_tracing",
+    "//components/viz/service",
+    "//content:resources",
+    "//content/app/resources",
+    "//content/common/service_worker:service_worker_types_proto",
+    "//content/public/common:interfaces",
+    "//content/public/common:service_names",
+    "//device/base/synchronization",
+    "//device/bluetooth",
+    "//gpu",
+    "//gpu/command_buffer/client:gles2_implementation",
+    "//gpu/command_buffer/client:gles2_interface",
+    "//gpu/command_buffer/service",
+    "//gpu/ipc/client",
+    "//gpu/ipc/common",
+    "//gpu/skia_bindings",
+    "//ipc",
+    "//media",
+    "//media:shared_memory_support",
+    "//media/base/ipc",
+    "//media/capture",
+    "//media/capture/ipc",
+    "//media/gpu:buildflags",
+    "//media/gpu/ipc/client",
+    "//media/gpu/ipc/common",
+    "//media/midi",
+    "//media/midi:mojo",
+    "//mojo/public/cpp/system",
+    "//net",
+    "//ppapi/buildflags",
+    "//sandbox",
+    "//sandbox:sandbox_buildflags",
+    "//services/network/public/cpp",
+    "//services/network/public/mojom",
+    "//services/resource_coordinator/public/cpp:resource_coordinator_cpp",
+    "//services/service_manager",
+    "//services/service_manager/embedder",
+    "//services/service_manager/public/cpp",
+    "//services/service_manager/public/mojom",
+    "//services/service_manager/runner/common",
+    "//services/service_manager/zygote:zygote_buildflags",
+    "//services/video_capture/public/mojom",
+    "//services/viz/public/interfaces",
+    "//services/ws/public/mojom",
+    "//skia",
+    "//storage/common",
+    "//third_party/angle:angle_gpu_info_util",
+    "//third_party/boringssl",
+    "//third_party/icu",
+    "//ui/base",
+    "//ui/base/ime",
+    "//ui/display",
+    "//ui/events/blink",
+    "//ui/gfx",
+    "//ui/gfx/geometry",
+    "//ui/gfx/ipc",
+    "//ui/gfx/ipc/color",
+    "//ui/gfx/ipc/geometry",
+    "//ui/gfx/ipc/skia",
+    "//ui/gl",
+    "//ui/gl/init",
+    "//ui/latency/ipc",
+    "//ui/shell_dialogs",
+    "//url",
+    "//url/ipc:url_ipc",
+  ]
+
+  defines = []
+  include_dirs = []
+  libs = []
+  ldflags = []
+
+  allow_circular_includes_from = [
+    ":mojo_bindings",
+    "//content/public/common:interfaces",
+  ]
+
+  if (is_android && use_seccomp_bpf) {
+    set_sources_assignment_filter([])
+    sources += [
+      "//services/service_manager/sandbox/linux/bpf_base_policy_linux.cc",
+      "//services/service_manager/sandbox/linux/bpf_base_policy_linux.h",
+    ]
+    set_sources_assignment_filter(sources_assignment_filter)
+  }
+
+  if (is_mac) {
+    deps += [ "//sandbox/mac:seatbelt" ]
+  }
+
+  if (is_android) {
+    deps += [
+      "//content/public/android:common_aidl",
+      "//content/public/android:jni",
+    ]
+
+    libs += [ "android" ]
+  }
+
+  if (is_debug && !is_component_build && enable_plugins) {
+    # Content depends on the PPAPI message logging stuff; if this isn't here,
+    # some unit test binaries won't compile. This only worked in release mode
+    # because logging is disabled there.
+    deps += [ "//ppapi/proxy:ipc_sources" ]
+  }
+
+  if (use_ozone) {
+    deps += [ "//ui/ozone" ]
+  } else {
+    sources -= [ "cursors/webcursor_ozone.cc" ]
+  }
+
+  if (!use_aura) {
+    sources -= [ "cursors/webcursor_aura.cc" ]
+  }
+
+  if (!use_aura || !use_x11) {
+    sources -= [ "cursors/webcursor_aurax11.cc" ]
+  }
+
+  if (is_linux) {
+    deps += [ "//third_party/fontconfig" ]
+  }
+
+  if (is_mac || is_win || is_android || is_fuchsia) {
+    sources -= [ "font_list_fontconfig.cc" ]
+  }
+
+  if (enable_plugins) {
+    deps += [
+      "//ppapi/proxy:ipc",
+      "//ppapi/shared_impl",
+    ]
+  } else {
+    sources -= [
+      "pepper_file_util.cc",
+      "pepper_file_util.h",
+      "pepper_plugin_list.cc",
+      "pepper_plugin_list.h",
+      "pepper_renderer_instance_data.cc",
+      "pepper_renderer_instance_data.h",
+      "plugin_list.cc",
+      "plugin_list.h",
+    ]
+  }
+
+  if (!is_win || !use_aura) {
+    sources -= [ "cursors/webcursor_aurawin.cc" ]
+  }
+
+  if (is_mac) {
+    deps += [ "//media/gpu" ]
+  }
+
+  if (enable_ipc_fuzzer) {
+    configs += [ "//tools/ipc_fuzzer:ipc_fuzzer_config" ]
+    sources += [
+      "external_ipc_dumper.cc",
+      "external_ipc_dumper.h",
+    ]
+  }
+
+  if (is_fuchsia) {
+    sources += [
+      "font_list_fuchsia.cc",
+      "sandbox_policy_fuchsia.cc",
+      "sandbox_policy_fuchsia.h",
+    ]
+
+    deps += [
+      "//third_party/fuchsia-sdk:fdio",
+      "//third_party/fuchsia-sdk:fonts",
+      "//third_party/fuchsia-sdk:scenic",
+    ]
+  }
+}
+
+# See comment at the top of //content/BUILD.gn for how this works.
+group("for_content_tests") {
+  visibility = [ "//content/test/*" ]
+  if (!is_component_build) {
+    public_deps = [
+      ":common",
+    ]
+  }
+}
+
+mojom("mojo_bindings") {
+  # This interface is internal to content.
+  visibility = [ "//content/*" ]
+
+  # indexed_db.mojom uses a native typemap that is not available in Java.
+  cpp_only = true
+
+  # imports vs deps check is disabled for this target to work around
+  # windows multiple definitions linker error caused by having
+  # both a direct and an indirect dependency on the same target
+  skip_deps_check = true
+
+  disable_variants = true
+
+  sources = [
+    "appcache.mojom",
+    "associated_interfaces.mojom",
+    "child.mojom",
+    "child_control.mojom",
+    "child_memory_coordinator.mojom",
+    "field_trial_recorder.mojom",
+    "frame.mojom",
+    "frame_sink_provider.mojom",
+    "histogram_fetcher.mojom",
+    "host_zoom.mojom",
+    "image_downloader/image_downloader.mojom",
+    "indexed_db/indexed_db.mojom",
+    "input/input_handler.mojom",
+    "input/input_injector.mojom",
+    "input/synchronous_compositor.mojom",
+    "manifest_observer.mojom",
+    "media/media_stream.mojom",
+    "media/peer_connection_tracker.mojom",
+    "media/renderer_audio_input_stream_factory.mojom",
+    "media/renderer_audio_output_stream_factory.mojom",
+    "memory_coordinator.mojom",
+    "native_types.mojom",
+    "navigation_client.mojom",
+    "navigation_params.mojom",
+    "page_state.mojom",
+    "push_messaging.mojom",
+    "render_frame_message_filter.mojom",
+    "render_frame_metadata.mojom",
+    "render_message_filter.mojom",
+    "render_widget_window_tree_client_factory.mojom",
+    "renderer.mojom",
+    "renderer_host.mojom",
+    "service_worker/controller_service_worker.mojom",
+    "service_worker/embedded_worker.mojom",
+    "service_worker/service_worker.mojom",
+    "service_worker/service_worker_container.mojom",
+    "service_worker/service_worker_provider.mojom",
+    "shared_worker/shared_worker.mojom",
+    "shared_worker/shared_worker_client.mojom",
+    "shared_worker/shared_worker_connector.mojom",
+    "shared_worker/shared_worker_factory.mojom",
+    "shared_worker/shared_worker_host.mojom",
+    "shared_worker/shared_worker_info.mojom",
+    "url_loader_factory_bundle.mojom",
+    "widget.mojom",
+  ]
+
+  if (is_win) {
+    sources += [ "dwrite_font_proxy.mojom" ]
+  }
+
+  if (is_mac) {
+    sources += [
+      "font_loader_mac.mojom",
+      "render_widget_host_ns_view.mojom",
+    ]
+  }
+
+  enabled_features = []
+  if (enable_ipc_logging) {
+    enabled_features += [ "ipc_logging" ]
+  }
+  if (is_linux || is_chromeos) {
+    enabled_features += [ "supports_thread_priorities" ]
+  }
+
+  import_dirs = [ "//mojo/services" ]
+
+  public_deps = [
+    "//components/services/leveldb/public/interfaces",
+    "//content/public/common:interfaces",
+    "//content/public/common:resource_type_bindings",
+    "//ipc:mojom_constants",
+    "//media/mojo/interfaces",
+    "//mojo/public/mojom/base",
+    "//services/network/public/mojom",
+    "//services/service_manager/public/mojom",
+    "//services/video_capture/public/mojom",
+    "//services/viz/public/interfaces",
+    "//services/ws/public/mojom",
+    "//services/ws/public/mojom/ime",
+    "//skia/public/interfaces",
+    "//third_party/blink/public:mojo_bindings",
+    "//third_party/blink/public:web_feature_mojo_bindings",
+    "//third_party/blink/public/mojom:mojom_core",
+    "//ui/base/mojo",
+    "//ui/events/mojo:interfaces",
+    "//ui/gfx/geometry/mojo",
+    "//ui/gfx/mojo",
+    "//ui/gfx/range/mojo",
+    "//ui/latency/mojo:interfaces",
+    "//url/mojom:url_mojom_gurl",
+    "//url/mojom:url_mojom_origin",
+  ]
+
+  overridden_deps = [ "//third_party/blink/public/mojom:mojom_core" ]
+  component_deps = [ "//third_party/blink/public/common" ]
+
+  component_output_prefix = "content_common_mojo_bindings"
+  export_class_attribute = "CONTENT_EXPORT"
+  export_define = "CONTENT_IMPLEMENTATION=1"
+  export_header = "content/common/content_export.h"
+}

@@ -45,6 +45,6 @@ endif
 
 BUILD_DIR	:=out/$(BUILD_TARGET)
 PWD := $(shell pwd)
-ROOT_DIR := $(shell cd ../; pwd)
+ROOT_DIR := $(shell cd ../../; pwd)
 
 include target.mk
