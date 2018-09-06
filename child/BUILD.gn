@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/features.gni")
-import("//build/config/ui.gni")
 import("//ppapi/buildflags/buildflags.gni")
 import("//third_party/blink/public/public_features.gni")
 
@@ -42,7 +41,7 @@ target(link_target_type, "child_thread_impl") {
 
   deps = [
     "//base",
-    "//content/common",
+    "//remote/common",
     "//content/public/common:common_sources",
     "//mojo/core/embedder",
     "//mojo/public/cpp/bindings:bindings",
@@ -56,33 +55,6 @@ target(link_target_type, "child_thread_impl") {
     "//services/service_manager/runner/common",
     "//third_party/blink/public:mojo_bindings",
   ]
-
-  if (!use_default_render_theme) {
-    sources -= [
-    ]
-  }
-
-  if (is_android) {
-    deps += [ "//third_party/android_tools:cpu_features" ]
-  }
-
-  if (is_linux) {
-    deps += [
-      "//services/service_manager/zygote",
-    ]
-  }
-
-  if (is_win) {
-    libs = [ "dwrite.lib" ]
-  }
-
-  if (enable_plugins) {
-    deps += [
-    ]
-  } else {
-    sources -= [
-    ]
-  }
 
   configs += [
     "//build/config/compiler:no_size_t_to_int_warning",

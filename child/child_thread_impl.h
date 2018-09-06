@@ -32,16 +32,7 @@
 
 #include "mojo/public/cpp/bindings/associated_binding.h"
 #include "mojo/public/cpp/bindings/associated_binding_set.h"
-// #include "services/tracing/public/cpp/trace_event_agent.h"
 #include "third_party/blink/public/mojom/associated_interfaces/associated_interfaces.mojom.h"
-
-#if 0
-#if defined(OS_WIN)
-#include "content/public/common/font_cache_win.mojom.h"
-#elif defined(OS_MACOSX)
-#include "content/common/font_loader_mac.mojom.h"
-#endif
-#endif
 
 namespace IPC {
 class MessageFilter;
