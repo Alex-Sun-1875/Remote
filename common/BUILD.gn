@@ -86,6 +86,7 @@ mojom("mojo_bindings") {
     "child_control.mojom",
   ]
 
+  enabled_features = []
   if (is_linux || is_chromeos) {
     enabled_features += [ "supports_thread_priorities" ]
   }
