@@ -12,7 +12,7 @@
 #include "content/common/content_export.h"
 #include "mojo/public/cpp/system/invitation.h"
 
-namespace remote {
+namespace content {
 
 // Tells ChildThreadImpl to run in in-process mode. There are a couple of
 // parameters to run in the mode: An emulated io task runner used by

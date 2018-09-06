@@ -19,8 +19,8 @@
 
 // #include "components/variations/child_process_field_trial_syncer.h"
 // #include "content/child/memory/child_memory_coordinator_impl.h"
-#include "content/common/associated_interfaces.mojom.h"
-#include "content/common/child_control.mojom.h"
+#include "remote/common/associated_interfaces.mojom.h"
+#include "remote/common/child_control.mojom.h"
 #include "content/common/content_export.h"
 
 #include "child_thread.h"
@@ -47,11 +47,8 @@ class ScopedIPCSupport;
 } // core
 } // namespace mojo
 
-namespace remote {
-class InProcessChildThreadParams;
-} // namespace remote
-
 namespace content {
+class InProcessChildThreadParams;
 class ThreadSafeSender;
 
 class CONTENT_EXPORT ChildThreadImpl
@@ -197,7 +194,7 @@ class ChildThreadImpl::Options::Builder {
   public:
     Builder();
 
-    Builder& InBrowserProcess(const remote::InProcessChildThreadParams& params);
+    Builder& InBrowserProcess(const content::InProcessChildThreadParams& params);
     Builder& AutoStartServiceManagerConnection(bool auto_start);
     Builder& ConnectToBrowser(bool connect_to_browser);
     Builder& AddStartupFilter(IPC::MessageFilter* filter);

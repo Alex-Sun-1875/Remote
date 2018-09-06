@@ -4,7 +4,7 @@
 
 #include "in_process_child_thread_params.h"
 
-namespace remote {
+namespace content {
 
 InProcessChildThreadParams::InProcessChildThreadParams(
     scoped_refptr<base::SingleThreadTaskRunner> io_runner,
