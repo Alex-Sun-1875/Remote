@@ -40,6 +40,7 @@ build: build_target install
 
 clean:
 	@echo "===================== Make Clean Start =====================";
-	rm -rf $(ROOT_DIR)/$(BUILD_DIR)/$(tg)
+	@#rm -rf $(ROOT_DIR)/$(BUILD_DIR)/$(tg)
+	rm -rf $(ROOT_DIR)/out
 	@echo "====================== Make Clean End ======================";
 
