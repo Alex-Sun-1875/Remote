@@ -66,7 +66,6 @@ source_set("common") {
 mojom("mojo_bindings") {
   # This interface is internal to content.
   visibility = [
-    "//content/*",
     "//remote/*",
   ]
 
@@ -96,7 +95,7 @@ mojom("mojo_bindings") {
   public_deps = [
     "//mojo/public/mojom/base",
     "//third_party/blink/public:mojo_bindings",
-    "//third_party/blink/public:web_feature_mojo_bindings",
+    #"//third_party/blink/public:web_feature_mojo_bindings",
     "//third_party/blink/public/mojom:mojom_core",
   ]
 

@@ -47,8 +47,11 @@ class ScopedIPCSupport;
 } // core
 } // namespace mojo
 
-namespace content {
+namespace remote {
 class InProcessChildThreadParams;
+} // namespace remote
+
+namespace content {
 class ThreadSafeSender;
 
 class CONTENT_EXPORT ChildThreadImpl
@@ -194,7 +197,7 @@ class ChildThreadImpl::Options::Builder {
   public:
     Builder();
 
-    Builder& InBrowserProcess(const InProcessChildThreadParams& params);
+    Builder& InBrowserProcess(const remote::InProcessChildThreadParams& params);
     Builder& AutoStartServiceManagerConnection(bool auto_start);
     Builder& ConnectToBrowser(bool connect_to_browser);
     Builder& AddStartupFilter(IPC::MessageFilter* filter);

@@ -40,7 +40,7 @@
 #include "thread_safe_sender.h"
 
 // #include "content/common/field_trial_recorder.mojom.h"
-#include "content/common/in_process_child_thread_params.h"
+#include "remote/common/in_process_child_thread_params.h"
 // #include "content/public/common/connection_filter.h"
 // #include "content/public/common/content_client.h"
 // #include "content/public/common/content_features.h"
@@ -78,6 +78,8 @@
 #include "base/posix/global_descriptors.h"
 #include "content/public/common/content_descriptors.h"
 #endif
+
+using namespace remote;
 
 namespace content {
 namespace {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CONTENT_COMMON_IN_PROCESS_CHILD_THREAD_PARAMS_H_
-#define CONTENT_COMMON_IN_PROCESS_CHILD_THREAD_PARAMS_H_
+#ifndef REMOTE_COMMON_IN_PROCESS_CHILD_THREAD_PARAMS_H_
+#define REMOTE_COMMON_IN_PROCESS_CHILD_THREAD_PARAMS_H_
 
 #include <string>
 
@@ -12,7 +12,7 @@
 #include "content/common/content_export.h"
 #include "mojo/public/cpp/system/invitation.h"
 
-namespace content {
+namespace remote {
 
 // Tells ChildThreadImpl to run in in-process mode. There are a couple of
 // parameters to run in the mode: An emulated io task runner used by
