@@ -23,6 +23,8 @@ target(link_target_type, "child_thread_impl") {
     # See comment in content/app/BUILD.gn above content_app_deps.
   }
 
+  include_dirs = [ "//third_party/blink/public/common/associated_interfaces" ]
+
   sources = [
     "child_process.cc",
     "child_process.h",
@@ -36,14 +38,13 @@ target(link_target_type, "child_thread_impl") {
 
   public_deps = [
     "//ipc",
-    "//services/service_manager/public/mojom:mojom_blink",
   ]
 
   deps = [
+    ":public_common",
     "//base",
     "//remote/common",
     "//remote/common:mojo_bindings",
-    "//content/public/common:remote_common",
     "//content/public/common:service_names",
     "//mojo/core/embedder",
     "//mojo/public/cpp/bindings:bindings",
@@ -53,10 +54,32 @@ target(link_target_type, "child_thread_impl") {
     "//services/service_manager/public/cpp",
     "//services/service_manager/public/mojom",
     "//services/service_manager/runner/common",
-    "//third_party/blink/public:mojo_bindings",
   ]
 
   configs += [
     "//build/config/compiler:no_size_t_to_int_warning",
   ]
+}
+
+target(link_target_type, "public_common") {
+  sources = [
+    "//content/public/common/content_switches.h",
+    "//content/public/common/content_switches.cc",
+    "//content/public/common/service_manager_connection.h",
+    "//content/public/common/service_names.mojom.h",
+    "//content/public/common/simple_connection_filter.h",
+    "//content/public/common/simple_connection_filter.cc",
+    "//content/public/common/connection_filter.h",
+  ]
+
+  public_configs = [ "//v8:external_startup_data" ]
+
+  public_deps = [
+    "//content/public/common:service_names",
+    "//services/service_manager/embedder",
+    "//services/service_manager/public/cpp",
+    "//services/service_manager/public/mojom",
+  ]
+
+  deps = []
 }

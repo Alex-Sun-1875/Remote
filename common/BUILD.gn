@@ -43,14 +43,14 @@ source_set("common") {
   public_deps = [
     ":mojo_bindings",
     "//ipc",
-    "//third_party/blink/public/common",
+    #"//third_party/blink/public/common",
   ]
   deps = [
     ":buildflags",
     "//base",
-    "//ipc",
-    "//net",
-    "//url",
+    #"//ipc",
+    #"//net",
+    #"//url",
   ]
 
   defines = []
@@ -94,16 +94,30 @@ mojom("mojo_bindings") {
 
   public_deps = [
     "//mojo/public/mojom/base",
-    "//third_party/blink/public:mojo_bindings",
-    #"//third_party/blink/public:web_feature_mojo_bindings",
     "//third_party/blink/public/mojom:mojom_core",
   ]
 
   overridden_deps = [ "//third_party/blink/public/mojom:mojom_core" ]
-  component_deps = [ "//third_party/blink/public/common" ]
+  component_deps = [ ":associated_interfaces" ]
 
   component_output_prefix = "remote_common_mojo_bindings"
   export_class_attribute = "CONTENT_EXPORT"
   export_define = "CONTENT_IMPLEMENTATION=1"
   export_header = "content/common/content_export.h"
+}
+
+source_set("associated_interfaces") {
+  sources = [
+    "//third_party/blink/public/common/associated_interfaces/associated_interface_provider.h",
+    "//third_party/blink/public/common/associated_interfaces/associated_interface_registry.h",
+    "//third_party/blink/common/associated_interfaces/associated_interface_provider.cc",
+    "//third_party/blink/common/associated_interfaces/associated_interface_registry.cc",
+  ]
+
+  public_deps = [ "//third_party/blink/public/mojom:mojom_core_headers" ]
+
+  deps = [
+    "//base",
+    "//mojo/public/cpp/system",
+  ]
 }
