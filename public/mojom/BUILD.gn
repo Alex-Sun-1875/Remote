@@ -1,0 +1,31 @@
+# Copyright 2018 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+# This target includes all mojom interfaces which can be used from
+# Source/platform. In particular these mojom interfaces can't use types that
+# are typemapped to a type in Source/core.
+
+# Kept separate from "mojom_platform" because the Java bindings are specifically
+# needed by Android's implementation of payments
+# (in components/payments/content/android and chrome/android/).
+# those high-level service worker mojom files there.
+mojom("mojom_core_impl") {
+  sources = [ "associated_interfaces/associated_interfaces.mojom" ]
+  public_deps = [
+    "//mojo/public/mojom/base",
+  ]
+
+  overridden_deps_blink = []
+  component_deps_blink = []
+
+  export_class_attribute = "BLINK_COMMON_EXPORT"
+  export_define = "BLINK_COMMON_IMPLEMENTATION=1"
+  export_header = "third_party/blink/common/common_export.h"
+
+  export_class_attribute_blink = "CORE_EXPORT"
+  export_define_blink = "BLINK_CORE_IMPLEMENTATION=1"
+  export_header_blink = "third_party/blink/renderer/core/core_export.h"
+}

@@ -32,7 +32,7 @@
 
 #include "mojo/public/cpp/bindings/associated_binding.h"
 #include "mojo/public/cpp/bindings/associated_binding_set.h"
-#include "third_party/blink/public/mojom/associated_interfaces/associated_interfaces.mojom.h"
+#include "remote/public/mojom/associated_interfaces/associated_interfaces.mojom.h"
 
 namespace IPC {
 class MessageFilter;
