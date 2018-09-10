@@ -62,8 +62,8 @@ class CONTENT_EXPORT ChildThreadImpl
 public:
   struct CONTENT_EXPORT Options;
 
-  ChildThreadImpl();
-  explicit ChildThreadImpl(const Options& options);
+  ChildThreadImpl(base::RepeatingClosure quit_closure);
+  explicit ChildThreadImpl(base::RepeatingClosure quit_closure, const Options& options);
   ~ChildThreadImpl() override; // 类的析构函数只有一个,不能够被继承,只能被重写
 
   virtual void Shutdown();
@@ -164,6 +164,7 @@ private:
   ChildThreadMessageRouter router_;
   bool on_channel_error_called_;
   scoped_refptr<base::SingleThreadTaskRunner> main_thread_runner_;
+  base::RepeatingClosure quit_closure_;
   scoped_refptr<base::SingleThreadTaskRunner> browser_process_io_runner_;
   std::unique_ptr<base::WeakPtrFactory<ChildThreadImpl>> channel_connected_factory_;
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;

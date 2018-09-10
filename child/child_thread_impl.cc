@@ -289,6 +289,7 @@ ChildThreadImpl::ChildThreadImpl(base::RepeatingClosure quit_closure)
 ChildThreadImpl::ChildThreadImpl(base::RepeatingClosure quit_closure, const Options& options)
     : route_provider_binding_(this),
       router_(this),
+      quit_closure_(std::move(quit_closure)),
       browser_process_io_runner_(options.browser_process_io_runner),
       channel_connected_factory_(new base::WeakPtrFactory<ChildThreadImpl>(this)),
       ipc_task_runner_(options.ipc_task_runner),
@@ -424,7 +425,7 @@ void ChildThreadImpl::OnChannelError() {
   on_channel_error_called_ = true;
 
   if (!IsInBrowserProcess())
-    base::RunLoop::QuitCurrentWhenIdleDeprecated();
+    quit_closure_.Run();
 }
 
 bool ChildThreadImpl::Send(IPC::Message* msg) {
@@ -489,7 +490,7 @@ bool ChildThreadImpl::OnControlMessageReceived(const IPC::Message& msg) {
 }
 
 void ChildThreadImpl::ProcessShutdown() {
-  base::RunLoop::QuitCurrentWhenIdleDeprecated();
+  quit_closure_.Run();
 }
 
 void ChildThreadImpl::OnChildControlRequest(mojom::ChildControlRequest request) {

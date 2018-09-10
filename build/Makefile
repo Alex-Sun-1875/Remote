@@ -1,9 +1,9 @@
 HOST_NAME=$(shell hostname)
-RELEASE_BUILD_PARAM="is_debug = false  \
+RELEASE_BUILD_PARAM="is_debug = true  \
 						 is_component_build = true \
-						 symbol_level = 0 \
+						 symbol_level = 1 \
 						 enable_nacl = false \
-						 remove_webcore_debug_symbols = true \
+						 remove_webcore_debug_symbols = false \
 						 cc_wrapper=\"ccache\""
 
 

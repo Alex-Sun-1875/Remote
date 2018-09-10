@@ -30,7 +30,9 @@ ChildProcess::ChildProcess(
       shutdown_event_(base::WaitableEvent::ResetPolicy::MANUAL,
                       base::WaitableEvent::InitialState::NOT_SIGNALED),
       io_thread_("ChildIOThread") {
+  LOG(INFO) << "###sunlh### func:" << __func__ << ", 1111";
   DCHECK(!g_lazy_tls.Pointer()->Get());
+  LOG(INFO) << "###sunlh### func:" << __func__ << ", 2222";
   g_lazy_tls.Pointer()->Set(this);
 
   if (!base::TaskScheduler::GetInstance()) {
@@ -44,9 +46,11 @@ ChildProcess::ChildProcess(
     DCHECK(base::TaskScheduler::GetInstance());
     initialized_task_scheduler_ = true;
   }
+  LOG(INFO) << "###sunlh### func:" << __func__ << ", 3333";
 
   base::Thread::Options thread_options(base::MessageLoop::TYPE_IO, 0);
   thread_options.priority = io_thread_priority;
+  LOG(INFO) << "###sunlh### func:" << __func__ << ", 4444";
 
   CHECK(io_thread_.StartWithOptions(thread_options));
 }
