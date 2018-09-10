@@ -12,20 +12,20 @@ import("//mojo/public/tools/bindings/mojom.gni")
 # needed by Android's implementation of payments
 # (in components/payments/content/android and chrome/android/).
 # those high-level service worker mojom files there.
-mojom("mojom_core_impl") {
+
+mojom("mojom_platform_impl") {
   sources = [ "associated_interfaces/associated_interfaces.mojom" ]
+
+  public_deps = [ "//mojo/public/mojom/base" ]
+}
+
+mojom("mojom_core_impl") {
   public_deps = [
+    ":mojom_platform_impl",
     "//mojo/public/mojom/base",
   ]
 
-  overridden_deps_blink = []
+  overridden_deps_blink = [ ":mojom_platform_impl" ]
   component_deps_blink = []
-
-  export_class_attribute = "BLINK_COMMON_EXPORT"
-  export_define = "BLINK_COMMON_IMPLEMENTATION=1"
-  export_header = "third_party/blink/common/common_export.h"
-
-  export_class_attribute_blink = "CORE_EXPORT"
-  export_define_blink = "BLINK_CORE_IMPLEMENTATION=1"
-  export_header_blink = "third_party/blink/renderer/core/core_export.h"
 }
+

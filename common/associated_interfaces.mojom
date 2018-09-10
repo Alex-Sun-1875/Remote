@@ -4,7 +4,7 @@
 
 module content.mojom;
 
-import "third_party/blink/public/mojom/associated_interfaces/associated_interfaces.mojom";
+import "remote/public/mojom/associated_interfaces/associated_interfaces.mojom";
 
 // Implemented by anything which manages one or more routes, to map a routing
 // ID to an AssociatedInterfaceProvider.

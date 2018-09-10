@@ -1,4 +1,8 @@
 #include <iostream>
+#include "base/command_line.h"
+#include "remote/child/child_process.h"
+#include "remote/child/child_thread_impl.h"
+#include "ipc/ipc_channel.h"
 
 int main(int argc, char* argv[]) {
   std::cout << "Start A Remote!!!" << std::endl;
@@ -10,16 +14,9 @@ int main(int argc, char* argv[]) {
 
   cmd_line->AppendSwitchASCII("", "");
 
-  base::MessageLoop main_loop;
-
   content::ChildProcess child_process;
-  content::ChildThread::Options::Builder builder;
-  content::ChildThreadImpl* child_thread = new ChildThreadImpl(builder.WithChannelName("0.0.0.0:12345")
-                                                         .WithChannelMode(ipc::Channel::MODE_NAMED_SERVER)
-                                                         .WithChannelType(ipc::Channel::TYPE_DGRAM)
-                                                         .Build());
+  content::ChildThreadImpl* child_thread = new content::ChildThreadImpl();
   child_process.set_main_thread(child_thread);
-  // main_loop.Run();
 #endif
 
   return 0;
