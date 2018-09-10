@@ -16,15 +16,6 @@ target(link_target_type, "child_thread_impl") {
   # Internal targets can link to this but only if they're child processes
   # (i.e. not content/browser or content/common) and only if they're inside the
   # content component (i.e. not content/test or content/shell).
-  visibility = [
-    "*",
-  ]
-  if (is_android) {
-    # See comment in content/app/BUILD.gn above content_app_deps.
-  }
-
-  include_dirs = [ "//third_party/blink/public/common/associated_interfaces" ]
-
   sources = [
     "child_process.cc",
     "child_process.h",
@@ -66,6 +57,8 @@ target(link_target_type, "public_common") {
     "//content/public/common/content_switches.h",
     "//content/public/common/content_switches.cc",
     "//content/public/common/service_manager_connection.h",
+    "//content/common/service_manager/service_manager_connection_impl.h",
+    "//content/common/service_manager/service_manager_connection_impl.cc",
     "//content/public/common/service_names.mojom.h",
     "//content/public/common/simple_connection_filter.h",
     "//content/public/common/simple_connection_filter.cc",
@@ -75,6 +68,7 @@ target(link_target_type, "public_common") {
   public_configs = [ "//v8:external_startup_data" ]
 
   public_deps = [
+    "//remote/common:mojo_bindings",
     "//content/public/common:service_names",
     "//services/service_manager/embedder",
     "//services/service_manager/public/cpp",

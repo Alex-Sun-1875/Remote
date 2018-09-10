@@ -6,7 +6,6 @@
 
 int main(int argc, char* argv[]) {
   std::cout << "Start A Remote!!!" << std::endl;
-#if 0
   base::PlatformThread::SetName("RemoteMain");
 
   base::CommandLine::Init(argc, argv);
@@ -17,7 +16,6 @@ int main(int argc, char* argv[]) {
   content::ChildProcess child_process;
   content::ChildThreadImpl* child_thread = new content::ChildThreadImpl();
   child_process.set_main_thread(child_thread);
-#endif
 
   return 0;
 }

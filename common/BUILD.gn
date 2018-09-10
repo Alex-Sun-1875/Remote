@@ -114,7 +114,7 @@ jumbo_source_set("associated_interfaces_common") {
     "//remote/public/common/associated_interfaces/associated_interface_registry.cc",
   ]
 
-  #public_deps = [ "//third_party/blink/public/mojom:mojom_core_headers" ]
+  public_deps = [ "//third_party/blink/public/mojom:mojom_core_headers" ]
 
   deps = [
     "//base",
