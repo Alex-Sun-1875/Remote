@@ -283,15 +283,10 @@ bool ChildThreadImpl::ChildThreadMessageRouter::RouteMessage(const IPC::Message&
   return handled;
 }
 
-ChildThreadImpl::ChildThreadImpl()
-    : route_provider_binding_(this),
-      router_(this),
-      channel_connected_factory_(new base::WeakPtrFactory<ChildThreadImpl>(this)),
-      weak_factory_(this) {
-  Init(Options::Builder().Build());
-}
+ChildThreadImpl::ChildThreadImpl(base::RepeatingClosure quit_closure)
+    : ChildThreadImpl(std::move(quit_closure), Options::Builder().Build()) {}
 
-ChildThreadImpl::ChildThreadImpl(const Options& options)
+ChildThreadImpl::ChildThreadImpl(base::RepeatingClosure quit_closure, const Options& options)
     : route_provider_binding_(this),
       router_(this),
       browser_process_io_runner_(options.browser_process_io_runner),
