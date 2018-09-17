@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+#include "base/macros.h"
+#include "base/time/time.h"
+
 #include "base/callback_forward.h"
 #include "build/build_config.h"
 #include "remote/common/content_export.h"
@@ -25,14 +28,16 @@ struct MainFunctionParams;
 
 class RemoteMainDelegate {
   public:
-    virtual ~RemoteMainDelegate() {}
+    RemoteMainDelegate();
+    explicit RemoteMainDelegate(base::TimeTicks exe_entry_point_ticks);
+    virtual ~RemoteMainDelegate();
 
     virtual bool BasicStartupComplete(int* exit_code);
 
     virtual int RunProcess(const std::string& process_type,
                            const MainFunctionParams& main_function_params);
 
-    virtual void ProcessExiting(const std::string& process_type) {}
+    virtual void ProcessExiting(const std::string& process_type);
 
 #if defined(OS_MACOSX)
     virtual bool ProcessRegistersWithSystemProcess(const std::string& process_type);
@@ -52,7 +57,7 @@ class RemoteMainDelegate {
     virtual void OnServiceManagerInitialized(const base::Closure& quit_closure,
                                              service_manager::BackgroundServiceManager* service_manager);
 
-    virtual void PreCreateMainMessageLoop() {}
+    virtual void PreCreateMainMessageLoop();
 
     virtual void PostEarlyInitialization() {}
 };
