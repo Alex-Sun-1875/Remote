@@ -19,7 +19,7 @@ RemoteServiceManagerMainDelegate::~RemoteServiceManagerMainDelegate() = default;
 
 int RemoteServiceManagerMainDelegate::Initialize(const InitializeParams& params) {
 #if defined(OS_MACOSX)
-  reomte_main_params_.autorelease_pool = params.autorelease_pool;
+  remote_main_params_.autorelease_pool = params.autorelease_pool;
 #endif
 
   return remote_main_runner_->Initialize(remote_main_params_);

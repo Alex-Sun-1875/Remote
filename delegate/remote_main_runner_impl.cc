@@ -28,6 +28,7 @@
 
 #include "remote/delegate/mojo/mojo_init.h"
 #include "remote/delegate/remote_main_delegate.h"
+#include "remote/common/content_constants_internal.h"
 
 // TODO: Need transplant to remote
 #include "content/public/common/content_switches.h"

@@ -7,7 +7,7 @@
 
 #include "base/callback_forward.h"
 #include "build/build_config.h"
-#include "content/common/content_export.h"
+#include "remote/common/content_export.h"
 #include "services/service_manager/embedder/process_type.h"
 
 namespace base {

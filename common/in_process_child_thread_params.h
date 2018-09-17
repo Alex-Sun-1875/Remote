@@ -9,7 +9,7 @@
 
 #include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
-#include "content/common/content_export.h"
+#include "remote/common/content_export.h"
 #include "mojo/public/cpp/system/invitation.h"
 
 namespace content {

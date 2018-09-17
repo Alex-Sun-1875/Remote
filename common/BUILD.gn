@@ -1,6 +1,4 @@
-# Copyright 2014 The Chromium Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Remote Common
 
 import("//build/buildflag_header.gni")
 import("//build/config/features.gni")
@@ -22,14 +20,9 @@ source_set("common") {
   # In addition, targets outside of the content component (shell and tests)
   # must not link to this because it will duplicate the code in the component
   # build.
-  visibility = [ "//content/*",
-                 "//remote/child/*",
-  ]
+  visibility = [ "//remote/*" ]
 
   sources = [
-    #"child_process_host_impl.cc",
-    #"child_process_host_impl.h",
-    "content_export.h",
     "in_process_child_thread_params.h",
     "in_process_child_thread_params.cc",
   ]
@@ -42,15 +35,12 @@ source_set("common") {
 
   public_deps = [
     ":mojo_bindings",
+    ":export",
     "//ipc",
-    #"//third_party/blink/public/common",
   ]
   deps = [
     ":buildflags",
     "//base",
-    #"//ipc",
-    #"//net",
-    #"//url",
   ]
 
   defines = []
@@ -64,12 +54,10 @@ source_set("common") {
 }
 
 mojom("mojo_bindings") {
-  # This interface is internal to content.
   visibility = [
     "//remote/*",
   ]
 
-  # indexed_db.mojom uses a native typemap that is not available in Java.
   cpp_only = true
 
   # imports vs deps check is disabled for this target to work around
@@ -103,7 +91,7 @@ mojom("mojo_bindings") {
   component_output_prefix = "remote_common_mojo_bindings"
   export_class_attribute = "CONTENT_EXPORT"
   export_define = "CONTENT_IMPLEMENTATION=1"
-  export_header = "content/common/content_export.h"
+  export_header = "remote/common/content_export.h"
 }
 
 jumbo_source_set("associated_interfaces_common") {
@@ -144,5 +132,23 @@ source_set("associated_interfaces_headers") {
   deps = [
     "//base",
     "//mojo/public/cpp/system",
+  ]
+}
+
+source_set("constants") {
+  visibility = [ "//remote/*" ]
+  sources = [
+    "content_constants_internal.h",
+    "content_constants_internal.cc",
+  ]
+
+  deps = [ ":export" ]
+}
+
+source_set("export") {
+  visibility = [ "//remote/*" ]
+
+  sources = [
+    "content_export.h"
   ]
 }

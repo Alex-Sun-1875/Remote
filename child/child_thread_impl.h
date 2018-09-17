@@ -21,7 +21,7 @@
 // #include "content/child/memory/child_memory_coordinator_impl.h"
 #include "remote/common/associated_interfaces.mojom.h"
 #include "remote/common/child_control.mojom.h"
-#include "content/common/content_export.h"
+#include "remote/common/content_export.h"
 
 #include "child_thread.h"
 

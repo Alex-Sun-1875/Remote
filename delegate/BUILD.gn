@@ -11,12 +11,12 @@ template("implement_remote_main_delegate") {
 
   content_app_deps = [
     "//base",
-    "//content:export",
     "//content/public/common:service_names",
     "//services/service_manager/embedder",
     "//services/service_manager/public/mojom",
     "//services/service_manager/runner/common",
     "//mojo/core/embedder",
+    "//remote/common:constants",
   ]
 
   source_set(runner_target_name) {

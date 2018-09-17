@@ -7,7 +7,7 @@
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "content/common/content_export.h"
+#include "remote/common/content_export.h"
 #include "ipc/ipc_sender.h"
 
 namespace base {
