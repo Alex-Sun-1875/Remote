@@ -1,2 +1,0 @@
-# Remote
-Chromium Ppapi Plugin
