@@ -1,3 +1,80 @@
-#
+# Remote Main Delegate
 
-import("remote/")
+template("implement_remote_main_delegate") {
+  runner_target_name = "remote_main_runer_" + target_name
+  main_target_name = target_name
+
+  extra_configs = [
+    "//build/config/compiler:wexit_time_destructors",
+    "//content:content_implementation",
+  ]
+
+  content_app_deps = [
+    "//base",
+    "//content:export",
+    "//content/public/common:service_names",
+    "//services/service_manager/embedder",
+    "//services/service_manager/public/mojom",
+    "//services/service_manager/runner/common",
+    "//mojo/core/embedder",
+  ]
+
+  source_set(runner_target_name) {
+    check_includes = false
+
+    sources = [
+      "remote_main_runner.h",
+      "remote_main_delegate.cc",
+      "remote_main_delegate.h",
+      "remote_main_runner_impl.cc",
+      "remote_main_runner_impl.h",
+    ]
+
+    configs += extra_configs
+
+    deps = content_app_deps
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    forward_variables_from(invoker, [ "defines" ])
+  }
+
+  source_set(main_target_name) {
+    sources = [
+      "remote_service_manager_main_delegate.cc",
+      "remote_service_manager_main_delegate.h",
+      "mojo/mojo_init.cc",
+      "mojo/mojo_init.h",
+    ]
+
+    configs += extra_configs
+
+    deps = content_app_deps + [
+             ":$runner_target_name",
+             "//ipc",
+             "//services/service_manager/embedder",
+           ]
+
+    forward_variables_from(invoker,
+                           [
+                             "defines",
+                             "visibility",
+                           ])
+
+    sources += [
+      "remote_main.cc",
+      "remote_main.h",
+    ]
+  }
+}
+
+implement_remote_main_delegate("all") {
+  visibility = [
+    "//remote/*",
+  ]
+
+  deps = []
+}
+

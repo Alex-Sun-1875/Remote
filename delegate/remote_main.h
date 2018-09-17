@@ -22,8 +22,14 @@ struct RemoteMainParams {
 
   RemoteMainDelegate* delegate;
 
+#if !defined(OS_ANDROID)
+  int argc = 0;
+  const char** argv = nullptr;
+#endif
+
 #if defined(OS_MACOSX)
   base::mac::ScopedNSAutoreleasePool* autorelease_pool = nullptr;
+#endif
 };
 
 CONTENT_EXPORT int RemoteMain(const RemoteMainParams& params);

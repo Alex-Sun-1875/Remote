@@ -1,7 +1,7 @@
 #include "remote/delegate/remote_service_manager_main_delegate.h"
 
 #include "base/command_line.h"
-#include "remote/delegate/remote_main_runner.h"
+#include "remote/delegate/remote_main_runner_impl.h"
 #include "remote/delegate/remote_main_delegate.h"
 #include "content/public/common/content_switches.h"
 #include "content/public/common/service_names.mojom.h"
@@ -17,7 +17,7 @@ RemoteServiceManagerMainDelegate::RemoteServiceManagerMainDelegate(
 
 RemoteServiceManagerMainDelegate::~RemoteServiceManagerMainDelegate() = default;
 
-RemoteServiceManagerMainDelegate::Initialize(const RemoteMainParams& params) {
+int RemoteServiceManagerMainDelegate::Initialize(const InitializeParams& params) {
 #if defined(OS_MACOSX)
   reomte_main_params_.autorelease_pool = params.autorelease_pool;
 #endif
@@ -25,7 +25,7 @@ RemoteServiceManagerMainDelegate::Initialize(const RemoteMainParams& params) {
   return remote_main_runner_->Initialize(remote_main_params_);
 }
 
-RemoteServiceManagerMainDelegate::IsEmbedderSubprocess() {
+bool RemoteServiceManagerMainDelegate::IsEmbedderSubprocess() {
   auto type = base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(switches::kProcessType);
 
   return type == switches::kGpuProcess ||
@@ -38,6 +38,12 @@ RemoteServiceManagerMainDelegate::IsEmbedderSubprocess() {
 
 int RemoteServiceManagerMainDelegate::RunEmbedderProcess() {
   return remote_main_runner_->Run(start_service_manager_only_);
+}
+
+void RemoteServiceManagerMainDelegate::ShutDownEmbedderProcess() {
+#if !defined(OS_ANDROID)
+  remote_main_runner_->Shutdown();
+#endif
 }
 
 service_manager::ProcessType RemoteServiceManagerMainDelegate::OverrideProcessType() {
@@ -57,7 +63,7 @@ std::unique_ptr<base::Value> RemoteServiceManagerMainDelegate::CreateServiceCata
 
 bool RemoteServiceManagerMainDelegate::ShouldLaunchAsServiceProcess(
     const service_manager::Identity& identity) {
-  return identity.name() != mojo::kPackagedServicesServiceName;
+  return identity.name() != mojom::kPackagedServicesServiceName;
 }
 
 void RemoteServiceManagerMainDelegate::AdjustServiceProcessCommandLine(
@@ -65,7 +71,7 @@ void RemoteServiceManagerMainDelegate::AdjustServiceProcessCommandLine(
     base::CommandLine* command_line) {
   base::CommandLine::StringVector args_without_switches;
   if (identity.name() == mojom::kPackagedServicesServiceName) {
-    args_without_switches == command_line->GetArgs();
+    args_without_switches = command_line->GetArgs();
     base::CommandLine::SwitchMap switches = command_line->GetSwitches();
     switches.erase(switches::kProcessType);
     *command_line = base::CommandLine(command_line->GetProgram());

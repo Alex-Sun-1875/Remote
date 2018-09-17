@@ -7,5 +7,6 @@ executable("remote_main") {
     "//base:base",
     "child:child_thread_impl",
     "//ipc:ipc",
+    "delegate:all",
   ]
 }

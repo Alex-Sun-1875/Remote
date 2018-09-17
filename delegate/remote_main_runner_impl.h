@@ -1,6 +1,17 @@
 #ifndef REMOTE_MAIN_RUNNER_IMPL_H_
 #define REMOTE_MAIN_RUNNER_IMPL_H_
 
+#include "base/callback_forward.h"
+#include "base/memory/scoped_refptr.h"
+#include "base/message_loop/message_loop.h"
+#include "build/build_config.h"
+#include "remote/delegate/remote_main.h"
+#include "remote/delegate/remote_main_runner.h"
+
+namespace base {
+class AtExitManager;
+}
+
 namespace content {
 class RemoteMainDelegate;
 struct RemoteMainParams;
@@ -31,9 +42,9 @@ class RemoteMainRunnerImpl : public RemoteMainRunner {
 #endif
 
     std::unique_ptr<base::MessageLoop> main_message_loop_;
-    std::unique_ptr<StartupDataImpl> startup_data_;
+    // std::unique_ptr<StartupDataImpl> startup_data_;
 
-    DISALLOW_COPY_AND_ASSIGIN(RemoteMainRunnerImpl);
+    DISALLOW_COPY_AND_ASSIGN(RemoteMainRunnerImpl);
 };
 
 } // namespace content

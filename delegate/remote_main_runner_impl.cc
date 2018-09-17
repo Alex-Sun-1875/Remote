@@ -70,7 +70,7 @@ RemoteMainRunnerImpl* RemoteMainRunnerImpl::Create() {
 RemoteMainRunnerImpl::RemoteMainRunnerImpl() {}
 
 RemoteMainRunnerImpl::~RemoteMainRunnerImpl() {
-  if (is_initialized_ && !is_shutdown)
+  if (is_initialized_ && !is_shutdown_)
     Shutdown();
 }
 
@@ -113,6 +113,7 @@ int RemoteMainRunnerImpl::Initialize(const RemoteMainParams& params) {
   if (!process_type.empty() || delegate_->ProcessRegistersWithSystemProcess(process_type)) {
     base::MachPortBroker::ChildSendTaskPortToParent(kMachBootstrapName);
   }
+#endif
 
   return -1;
 }

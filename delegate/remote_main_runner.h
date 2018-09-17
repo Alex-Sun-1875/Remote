@@ -6,7 +6,7 @@
 
 namespace content {
 
-class RemoteMainParams;
+struct RemoteMainParams;
 
 class CONTENT_EXPORT RemoteMainRunner {
   public:

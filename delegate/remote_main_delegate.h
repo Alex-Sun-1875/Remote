@@ -21,7 +21,7 @@ class Identity;
 
 namespace content {
 
-class MainFunctionParams;
+struct MainFunctionParams;
 
 class RemoteMainDelegate {
   public:
@@ -46,7 +46,7 @@ class RemoteMainDelegate {
 
     virtual service_manager::ProcessType OverrideProcessType();
 
-    virtual void AdjustServiceProcessCommandLine(const service_manager::Identify& identify,
+    virtual void AdjustServiceProcessCommandLine(const service_manager::Identity& identify,
                                                  base::CommandLine* command_line);
 
     virtual void OnServiceManagerInitialized(const base::Closure& quit_closure,
