@@ -6,6 +6,8 @@
 #include "build/build_config.h"
 
 #include "remote/delegate/remote_main.h"
+#include "remote/delegate/remote_main_delegate.h"
+#include "remote/delegate/remote_service_manager_main_delegate.h"
 
 // TODO: Need transplant to remote
 #include "content/public/common/content_switches.h"
@@ -59,6 +61,8 @@
 using namespace content;
 using namespace service_manager;
 
+namespace service_manager {
+
 namespace {
 
 constexpr size_t kMaximumMojoMessageSize = 128 * 1024 * 1024;
@@ -90,7 +94,7 @@ class ServiceProcessLauncherDelegateImpl
 #if defined(OS_POSIX) && !defined(OS_ANDROID)
 
 void SetupSignalHandlers() {
-  if (base::CommnadLine::ForCurrentProcess()->HasSwitch(switches::kDisableInProcessStackTraces)) {
+  if (base::CommandLine::ForCurrentProcess()->HasSwitch(switches::kDisableInProcessStackTraces)) {
     return;
   }
 
@@ -188,7 +192,7 @@ int RunService(MainDelegate* delegate) {
 
                                     if (service_name.empty()) {
                                       LOG(ERROR) << "Service process requires --service-name";
-                                      *exit_code = ;
+                                      *exit_code = 1;
                                       return;
                                     }
 
@@ -210,10 +214,12 @@ int RunService(MainDelegate* delegate) {
 
 } // namespace
 
+} // namespace service_manager
+
 int main(int argc, const char** argv) {
   RemoteMainDelegate remote_main_delegate(base::TimeTicks::FromInternalValue(0));
-  RemoteMainParmas params(&remote_main_delegate);
-  RemoteServiceManagerDelegate delegate(params);
+  RemoteMainParams params(&remote_main_delegate);
+  RemoteServiceManagerMainDelegate delegate(params);
   MainParams main_params(&delegate);
 #if !defined(OS_WIN) && !defined(OS_ANDROID)
   main_params.argc = argc;
@@ -276,8 +282,8 @@ int main(int argc, const char** argv) {
 
   mojo::core::Configuration mojo_config;
   if (process_type == ProcessType::kDefault &&
-      command_line.GetSwitchValueASCII(switches::kProcessType) ==
-          switches::kProcessTypeServiceManager) {
+      command_line.GetSwitchValueASCII(service_manager::switches::kProcessType) ==
+          service_manager::switches::kProcessTypeServiceManager) {
     mojo_config.is_broker_process = true;
   }
   mojo_config.max_message_num_bytes = kMaximumMojoMessageSize;
@@ -290,12 +296,12 @@ int main(int argc, const char** argv) {
     return exit_code;
   }
 
-  const auto& command_line = *base::CommandLine::ForCurrentProcess();
+  const auto& cmd_line = *base::CommandLine::ForCurrentProcess();
   if (process_type == ProcessType::kDefault) {
-    std::string type_switch = command_line.GetSwitchValueASCII(switches::kProcessType);
-    if (switches::kProcessTypeServiceManager == type_switch) {
+    std::string type_switch = cmd_line.GetSwitchValueASCII(service_manager::switches::kProcessType);
+    if (service_manager::switches::kProcessTypeServiceManager == type_switch) {
       process_type = ProcessType::kServiceManager;
-    } else if (switches::kProcessTypeService == type_switch) {
+    } else if (service_manager::switches::kProcessTypeService == type_switch) {
       process_type = ProcessType::kService;
     } else {
       process_type = ProcessType::kEmbedder;
@@ -330,5 +336,6 @@ int main(int argc, const char** argv) {
   if (process_type == ProcessType::kEmbedder)
     main_delegate->ShutDownEmbedderProcess();
 
+  LOG(INFO) << "###sunlh### func: " << __func__ << ", exit_code = " << exit_code;
   return exit_code;
 }
