@@ -65,7 +65,7 @@ target(link_target_type, "public_common") {
     "//content/public/common/connection_filter.h",
   ]
 
-  public_configs = [ "//v8:external_startup_data" ]
+  public_configs = []
 
   public_deps = [
     "//remote/common:mojo_bindings",
