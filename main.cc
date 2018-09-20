@@ -277,7 +277,7 @@ int main(int argc, const char** argv) {
 #if defined(OS_MACOSX)
   autorelease_pool = std::make_unique<base::mac::ScopedNSAutoreleasePool>();
   init_params.autorelease_pool = autorelease_pool.get();
-  InitializeMac();
+  // InitializeMac();
 #endif
 
   mojo::core::Configuration mojo_config;
