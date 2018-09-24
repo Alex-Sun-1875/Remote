@@ -132,6 +132,15 @@ int RemoteMainRunnerImpl::Run(bool start_service_manager_only) {
   main_params.autorelease_pool = autorelease_pool_;
 #endif
 
+  // TODO: Need to implement
+  RegisterMainThreadFactories();
+
+#if !defined(CHROME_MULTIPLE_DLL_CHILD)
+  if (process_type.empty()) {
+    
+  }
+#endif
+
   return RunOtherNameProcessTypeMain(process_type, main_params, delegate_);
 }
 

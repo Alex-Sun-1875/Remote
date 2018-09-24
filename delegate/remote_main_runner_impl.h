@@ -42,7 +42,7 @@ class RemoteMainRunnerImpl : public RemoteMainRunner {
 #endif
 
     std::unique_ptr<base::MessageLoop> main_message_loop_;
-    // std::unique_ptr<StartupDataImpl> startup_data_;
+    std::unique_ptr<StartupDataImpl> startup_data_;
 
     DISALLOW_COPY_AND_ASSIGN(RemoteMainRunnerImpl);
 };

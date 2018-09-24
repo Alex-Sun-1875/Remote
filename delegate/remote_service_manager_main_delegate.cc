@@ -28,15 +28,20 @@ int RemoteServiceManagerMainDelegate::Initialize(const InitializeParams& params)
 bool RemoteServiceManagerMainDelegate::IsEmbedderSubprocess() {
   auto type = base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(switches::kProcessType);
 
+  return true;
+
+#if 0
   return type == switches::kGpuProcess ||
          type == switches::kPpapiPluginProcess ||
          type == switches::kPpapiBrokerProcess ||
          type == switches::kRendererProcess ||
          type == switches::kUtilityProcess ||
          type == service_manager::switches::kZygoteProcess;
+#endif
 }
 
 int RemoteServiceManagerMainDelegate::RunEmbedderProcess() {
+  LOG(INFO) << "###sunlh### func: " << __func__;
   return remote_main_runner_->Run(start_service_manager_only_);
 }
 
