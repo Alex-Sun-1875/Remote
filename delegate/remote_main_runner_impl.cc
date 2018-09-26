@@ -12,6 +12,8 @@
 #include "base/at_exit.h"
 #include "base/base_switches.h"
 #include "base/command_line.h"
+#include "base/task/task_scheduler/task_scheduler.h"
+#include "base/threading/thread_task_runner_handle.h"
 // #include "base/feature_list.h"
 #include "base/files/file_path.h"
 #include "base/lazy_instance.h"
@@ -56,6 +58,23 @@ struct MainFunction {
   const char* name;
   int (*function)(const MainFunctionParams&);
 };
+
+void RunRemoteProcessMain(const MainFunctionParams& main_function_params,
+                         RemoteMainDelegate* delegate_) {
+  int exit_code = delegate_->RunProcess("", main_function_params);
+
+  if (exit_code >= 0) {
+    return;
+  }
+
+  LOG(INFO) << "###sunlh### func: " << __func__ << ", Main Start!!!";
+
+  base::RunLoop run_loop;
+  base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, run_loop.QuitClosure());
+  run_loop.Run();
+
+  return;
+}
 
 int RunOtherNameProcessTypeMain(const std::string& process_type,
                                 const MainFunctionParams& main_func_params,
@@ -133,11 +152,22 @@ int RemoteMainRunnerImpl::Run(bool start_service_manager_only) {
 #endif
 
   // TODO: Need to implement
-  RegisterMainThreadFactories();
+  // RegisterMainThreadFactories();
 
 #if !defined(CHROME_MULTIPLE_DLL_CHILD)
   if (process_type.empty()) {
-    
+    base::PlatformThread::SetName("RemoteMain");
+    base::TaskScheduler::Create("RemoteMain");
+    main_message_loop_ = std::unique_ptr<base::MessageLoop>();
+    main_thread_.reset(new base::Thread("RemoteMain"));
+    main_thread_->Start();
+    main_thread_task_runner_ = main_thread_->task_runner();
+
+    main_thread_task_runner_->PostTask(FROM_HERE,
+                                       base::Bind(RunRemoteProcessMain, main_params, delegate_));
+
+    return 0;
+    // return RunRemoteProcessMain(main_params, delegate_);
   }
 #endif
 

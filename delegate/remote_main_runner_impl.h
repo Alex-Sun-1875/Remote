@@ -1,6 +1,7 @@
 #ifndef REMOTE_MAIN_RUNNER_IMPL_H_
 #define REMOTE_MAIN_RUNNER_IMPL_H_
 
+#include "base/threading/thread.h"
 #include "base/callback_forward.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/message_loop/message_loop.h"
@@ -42,7 +43,9 @@ class RemoteMainRunnerImpl : public RemoteMainRunner {
 #endif
 
     std::unique_ptr<base::MessageLoop> main_message_loop_;
-    std::unique_ptr<StartupDataImpl> startup_data_;
+    // std::unique_ptr<StartupDataImpl> startup_data_;
+    std::unique_ptr<base::Thread> main_thread_;
+    scoped_refptr<base::SingleThreadTaskRunner> main_thread_task_runner_;
 
     DISALLOW_COPY_AND_ASSIGN(RemoteMainRunnerImpl);
 };

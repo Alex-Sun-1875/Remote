@@ -41,10 +41,17 @@ bool RemoteMainDelegate::BasicStartupComplete(int* exit_code) {
   return false;
 }
 
+int RemoteMain(const content::MainFunctionParams& params) {
+  LOG(INFO) << "###sunlh### func: " << __func__ << ", Start Run!!!";
+
+  return 0;
+}
+
 int RemoteMainDelegate::RunProcess(const std::string& process_type,
                                    const content::MainFunctionParams& main_function_params) {
 #if !defined(OS_ANDROID)
   static const MainFunction kMainFunctions[] = {
+    {"RemoteMain", RemoteMain},
     {"<invalid>", NULL},
   };
 
