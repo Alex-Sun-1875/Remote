@@ -156,15 +156,17 @@ int RemoteMainRunnerImpl::Run(bool start_service_manager_only) {
 
 #if !defined(CHROME_MULTIPLE_DLL_CHILD)
   if (process_type.empty()) {
+    main_message_loop_.reset(base::MessageLoop(base::MessageLoop::TYPE_UI));
     base::PlatformThread::SetName("RemoteMain");
     base::TaskScheduler::Create("RemoteMain");
-    main_message_loop_ = std::unique_ptr<base::MessageLoop>();
+    base::TaskScheduler::GetInstance()->StartWithDefaultParams();
+
     main_thread_.reset(new base::Thread("RemoteMain"));
     main_thread_->Start();
-    main_thread_task_runner_ = main_thread_->task_runner();
 
-    main_thread_task_runner_->PostTask(FROM_HERE,
-                                       base::Bind(RunRemoteProcessMain, main_params, delegate_));
+    base::RunLoop run_loop;
+    main_thread_->task_runner()->PostTask(FROM_HERE, run_loop.QuitClosure());
+    run_loop.Run();
 
     return 0;
     // return RunRemoteProcessMain(main_params, delegate_);
