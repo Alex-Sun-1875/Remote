@@ -29,6 +29,10 @@ ifeq (, $(tg))
 	tg:=remote_main
 endif
 
+ifeq (, $(test))
+	test:=main_test
+endif
+
 ifeq ($(CCACHE), y)
 	CC 			:=ccache $(CC)
 	CXX			:=ccache $(CXX)

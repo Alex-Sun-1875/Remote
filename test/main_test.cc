@@ -7,6 +7,8 @@
 #include "ipc/ipc_channel.h"
 
 #include "base/posix/global_descriptors.h"
+#include "base/rand_util.h"
+#include "base/strings/string_number_conversions.h"
 
 // mojo include file
 #include "mojo/core/embedder/configuration.h"
@@ -29,8 +31,18 @@
 
 #include "base/logging.h"
 
+void SaySomeThing(std::string str) {
+  LOG(INFO) << "Say: " << str << ", pid = " << getpid() << ", ppid = " << getppid() <<", tid = " << pthread_self();
+}
+
+void Print(std::string str) {
+  content::ChildProcess::current()->main_thread()->main_thread_runner()->PostTask(FROM_HERE,
+                                                                         base::Bind(&SaySomeThing, str));
+}
+
 int main(int argc, char* argv[]) {
   std::cout << "Start A Remote!!!" << std::endl;
+  LOG(INFO) << ", pid = " << getpid() << ", ppid = " << getppid() <<", tid = " << pthread_self();
   base::CommandLine::Init(argc, argv);
   // Chromium 中创建进程的时候需要一个 AtExitManager
   base::AtExitManager at_exit;
@@ -42,7 +54,7 @@ int main(int argc, char* argv[]) {
   base::GlobalDescriptors::GetInstance()->Set(service_manager::kMojoIPCChannel,
                                               service_manager::kMojoIPCChannel + base::GlobalDescriptors::kBaseDescriptor);
 
-  cmd_line->AppendSwitchASCII("Hello", "World");
+  cmd_line->AppendSwitchASCII("service-request-channel-token", base::NumberToString(base::RandUint64()));
 
   std::unique_ptr<base::MessageLoop>  main_message_loop;
   main_message_loop.reset(new base::MessageLoop(base::MessageLoop::TYPE_DEFAULT));
@@ -56,7 +68,13 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "###sunlh### func: " << __func__ << ", create child thread start!";
   content::ChildThreadImpl* child_thread = new content::ChildThreadImpl(run_loop.QuitClosure());
   LOG(INFO) << "###sunlh### func: " << __func__ << ", create child thread end!";
+  LOG(INFO) << "###sunlh### func: " << __func__ << ", set main thread begin!";
   child_process.set_main_thread(child_thread);
+  LOG(INFO) << "###sunlh### func: " << __func__ << ", set main thread end!";
+
+  base::RepeatingTimer timer;
+  timer.Start(FROM_HERE, base::TimeDelta::FromSeconds(2),
+              base::Bind(&Print, "Hello World!!!"));
 
   run_loop.Run();
 

@@ -34,9 +34,14 @@ build_target:
 	autoninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg)
 	@echo "======================== Build End =========================";
 
+build_test:
+	@echo "===================== Build Test Start =====================";
+	autoninja -C $(ROOT_DIR)/$(BUILD_DIR) $(test)
+	@echo "====================== Build Test End ======================";
+
 install:
 
-build: build_target install
+build: build_target build_test install
 
 clean:
 	@echo "===================== Make Clean Start =====================";

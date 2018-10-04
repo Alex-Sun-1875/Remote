@@ -12,3 +12,16 @@ executable("remote_main") {
     "//services/service_manager/background:lib",
   ]
 }
+
+executable("main_test") {
+  include_dirs = []
+  sources = [ "test/main_test.cc" ]
+  deps = [
+    "//base:base",
+    "child:child_thread_impl",
+    "//ipc:ipc",
+    "delegate:all",
+    "//services/service_manager:service_manager",
+    "//services/service_manager/background:lib",
+  ]
+}
