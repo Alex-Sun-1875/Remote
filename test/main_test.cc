@@ -46,35 +46,37 @@ int main(int argc, char* argv[]) {
   base::CommandLine::Init(argc, argv);
   // Chromium 中创建进程的时候需要一个 AtExitManager
   base::AtExitManager at_exit;
-  base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
+  // base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
 
   // Init mojo
   // mojo::core::Configuration mojo_config;
-  mojo::core::Init();
-  base::GlobalDescriptors::GetInstance()->Set(service_manager::kMojoIPCChannel,
-                                              service_manager::kMojoIPCChannel + base::GlobalDescriptors::kBaseDescriptor);
+  // mojo::core::Init();
+  // base::GlobalDescriptors::GetInstance()->Set(service_manager::kMojoIPCChannel,
+  //                                            service_manager::kMojoIPCChannel + base::GlobalDescriptors::kBaseDescriptor);
 
-  cmd_line->AppendSwitchASCII("service-request-channel-token", base::NumberToString(base::RandUint64()));
+  // cmd_line->AppendSwitchASCII("service-request-channel-token", base::NumberToString(base::RandUint64()));
 
-  std::unique_ptr<base::MessageLoop>  main_message_loop;
-  main_message_loop.reset(new base::MessageLoop(base::MessageLoop::TYPE_DEFAULT));
-  base::PlatformThread::SetName("RemoteMain");
+  // std::unique_ptr<base::MessageLoop>  main_message_loop;
+  // main_message_loop.reset(new base::MessageLoop(base::MessageLoop::TYPE_DEFAULT));
+  // base::PlatformThread::SetName("RemoteMain");
 
-  base::ThreadPriority io_thread_priority = base::ThreadPriority::NORMAL;
+  // base::ThreadPriority io_thread_priority = base::ThreadPriority::NORMAL;
 
-  content::ChildProcess child_process(io_thread_priority);
+  // content::ChildProcess child_process(io_thread_priority);
 
   base::RunLoop run_loop;
   LOG(INFO) << "###sunlh### func: " << __func__ << ", create child thread start!";
-  content::ChildThreadImpl* child_thread = new content::ChildThreadImpl(run_loop.QuitClosure());
+  // content::ChildThreadImpl* child_thread = new content::ChildThreadImpl(run_loop.QuitClosure());
   LOG(INFO) << "###sunlh### func: " << __func__ << ", create child thread end!";
   LOG(INFO) << "###sunlh### func: " << __func__ << ", set main thread begin!";
-  child_process.set_main_thread(child_thread);
+  // child_process.set_main_thread(child_thread);
   LOG(INFO) << "###sunlh### func: " << __func__ << ", set main thread end!";
 
-  base::RepeatingTimer timer;
-  timer.Start(FROM_HERE, base::TimeDelta::FromSeconds(2),
-              base::Bind(&Print, "Hello World!!!"));
+  base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                base::Bind(&SaySomeThing, "Hello World!!!"));
+  // base::RepeatingTimer timer;
+  // timer.Start(FROM_HERE, base::TimeDelta::FromSeconds(2),
+  //             base::Bind(&Print, "Hello World!!!"));
 
   run_loop.Run();
 

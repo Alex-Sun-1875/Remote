@@ -1,0 +1,11 @@
+# V8 samples
+
+executable("hello_world_test") {
+  sources = [ "hello-world.cc" ]
+
+  deps = [
+    "//v8:v8",
+    "//v8:v8_libbase",
+    "//v8:v8_libplatform",
+  ]
+}
