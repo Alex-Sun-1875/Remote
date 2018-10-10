@@ -78,3 +78,80 @@ v8::Local<V8::Context> CreateShellContext(v8::Isolate* isolate) {
 
   return v8::Context::New(isolate, NULL, global);
 }
+
+// The callback that is invoked by v8 whenever the JavaScript 'print'
+// function is called.  Prints its arguments on stdout separated by
+// spaces and ending with a newline.
+void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  bool first = true;
+  for (int i = 0; i < args.Length(); i++) {
+    v8::HandleScope handle_scope(args.GetIsolate());
+    if (first) {
+      first = false;
+    } else {
+      printf(" ");
+    }
+    v8::String::Utf8Value str(args.GetIsolate(), args[i]);
+    const char* cstr = ToCString(str);
+    printf("%s", cstr);
+  }
+  printf("\n");
+  fflush(stdout);
+}
+
+// The callback that is invoked by v8 whenever the JavaScript 'read'
+// function is called.  This function loads the content of the file named in
+// the argument into a JavaScript string.
+void Read(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  if (args.Length() != 1) {
+    args.GetIsolate()->ThrowException(
+        v8::String::NewFromUtf8(args.GetIsolate(), "Bad parameters",
+                                v8::NewStringType::kNormal).ToLocalChecked());
+    return;
+  }
+  v8::String::Utf8Value file(args.GetIsolate(), args[0]);
+  if (*file == NULL) {
+    args.GetIsolate()->ThrowException(
+        v8::String::NewFromUtf8(args.GetIsolate(), "Error loading file",
+                                v8::NewStringType::kNormal).ToLocalChecked());
+    return;
+  }
+  v8::Local<v8::String> source;
+  if (!ReadFile(args.GetIsolate(), *file).ToLocal(&source)) {
+    args.GetIsolate()->ThrowException(
+        v8::String::NewFromUtf8(args.GetIsolate(), "Error Reading file",
+                                v8::NewStringType::kNormal).ToLocalChecked());
+    return;
+  }
+
+  args.GetReturnValue().Set(source);
+}
+
+// The callback that is invoked by v8 whenever the JavaScript 'load'
+// function is called.  Loads, compiles and executes its argument
+// JavaScript file.
+void Load(v8::FunctionCallbackInfo<v8::Value>& args) {
+  for (int i = 0; i < args.Length(); i++) {
+    v8::HandleScope handle_scope(args.GetIsolate());
+    v8::String::Utf8Value file(args.GetIsolate(), args[i]);
+    if (*file = NULL) {
+      args.GetIsolate()->ThrowException(
+          v8::String::NewFromUtf8(args.GetIsolate(), "Error Loading file",
+                                  v8::NewStringType::knormal).ToLocalChecked());
+      return;
+    }
+    v8::Local<v8::String> source;
+    if (!ReadFile(args.GetIsolate(), *file).ToLocal(&source)) {
+      args.GetIsolate()->ThrowException(
+          v8::String::NewFromUtf8(args.GetIsolate(), "Error Reading file",
+                                  v8::NewStringType::kNormal).ToLocalChecked());
+      return;
+    }
+    if (!ExecuteString(args.GetIsolate(), source, args[i], false, false)) {
+      args.GetIsolate()->ThrowException(
+          v8::String::NewFromUtf8(args.GetIsolate(), "Error executing file",
+                                  v8::NewStringType::kNormal).ToLocalChecked());
+      return;
+    }
+  }
+}
