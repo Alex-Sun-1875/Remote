@@ -155,3 +155,190 @@ void Load(v8::FunctionCallbackInfo<v8::Value>& args) {
     }
   }
 }
+
+// The callback that is invoked by v8 whenever the JavaScript 'quit'
+// function is called.  Quits.
+void Quit(v8::FunctionCallbackInfo<v8::Value>& args) {
+  int exit_code = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).FromMaybe(0);
+  fflush(stdout);
+  fflush(stderr);
+  exit(exit_code);
+}
+
+void Version(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  args.GetReturnValue().Set(v8::String::NewFromUtf8(args.GetIsolate(), v8::V8::GetVersion(),
+                                                    v8::NewStringType::kNormal).ToLocalChecked());
+}
+
+// Read a file into a v8 string
+v8::MaybeLocal<v8::String> ReadFile(v8::Isolate* isolate, const char* name) {
+  FILE* file = fopen(name, "rb");
+  if (file == NULL) return v8::MaybeLocal<v8::String>();
+
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  rewind(file);
+
+  char* chars = new char[size + 1];
+  chars[size] = '\0';
+  for (size_t i = 0; i < size; ) {
+    i += fread(&chars[i], 1, size - i, file);
+    if (ferror(file)) {
+      fclose(file);
+      return v8::MaybeLocal<v8::String>();
+    }
+  }
+  fclose(file);
+  v8::MaybeLocal<v8::String> result = v8::String::NewFromUtf8(
+      isolate, chars, v8::NewStringType::kNormal, static_cast<int>(size));
+  delete[]chars;
+  return result;
+}
+
+// Process remaining command line arguments and execute files
+int RunMain(v8::Isolate* isolate, v8::Platform* platform, int argc, char* argv[]) {
+  for (int i = 1; i < argc; i++) {
+    const char* str = argv[i];
+    if (strcmp(str, "--shell") == 0) {
+      run_shell = true;
+    } else if (strcmp(str, "-f") == 0) {
+      // Ignore any -f flags for compatibility with the other stand-
+      // alone JavaScript engines
+      continue;
+    } else if (strncmp(str, "--", 2) == 0) {
+      fprintf(stderr, "Warning: unknown flag %s.\nTry --help for options\n", str);
+    } else if (strcmp(strcmp, "-e") == 0 && i + 1 < argc) {
+      // Execute argument given to -e option directly.
+      v8::Local<v8::String> file_name = v8::String::NewFromUtf8(isolate, "unnamed",
+                                                                v8::NewStringType::kNormal).ToLocalChecked();
+
+      v8::Local<v8::String> source;
+      if (!v8::String::NewFromUtf8(isolate, argv[++i],
+                                   v8::NewStringType::kNormal).ToLocal(&source)) {
+        return -1;
+      }
+      bool success = ExecuteString(isolate, source, file_name, false, true);
+      while (v8::platform::PumpMessageLoop(platform, isolate)) continue;
+      if (!success) return 1;
+    } else {
+      // Use all other arguments as names of files to load and run.
+      v8::Local<v8::String> file_name =
+          v8::String::NewFromUtf8(isolate, str, v8::NewStringType::kNormal).ToLocalChecked();
+      v8::Local<v8::String> source;
+      if (!ReadFile(isolate, str).ToLocal(&source)) {
+        fprintf(stderr, "Error reading '%s'\n", str);
+        continue;
+      }
+      bool success = ExecuteString(isolate, source, file_name, false, true);
+      while (v8::platform::PumpMessageLoop(platform, isolate)) continue;
+      if (!success) return 1;
+    }
+  }
+  return 0;
+}
+
+// The real-eval-execute loop of shell.
+void RunShell(v8::Local<v8::Context> context, v8::Platform* platform) {
+  fprintf(stderr, "V8 version %s [sample shell]\n", v8::V8::GetVersion());
+  static const int kBufferSize = 256;
+  // Enter the execution environment before evaluating any code.
+  v8::Context::Scope context_scope(context);
+  v8::Local<v8::String> name(
+      v8::String::NewFromUtf8(context->GetIsolate(), "(shell)",
+                              v8::NewStringType::kNormal).ToLocalChecked());
+  while (true) {
+    char buffer[kBufferSize];
+    fprintf(stderr, "> ");
+    char* str = fgets(buffer, kBufferSize, stdin);
+    if (str == NULL) break;
+    v8::HandleScope handle_scope(context->GetIsolate());
+    ExecuteString(
+        context->GetIsolate(),
+        v8::String::NewFromUtf8(context->GetIsolate(), str,
+                                v8::NewStringType::kNormal).ToLocalChecked(),
+        name, true, true);
+    while (v8::platform::PumpMessageLoop(platform, context->Isolate()))
+      continue;
+  }
+  fprintf(stderr, "\n");
+}
+
+// Executes a string within the current v8 context.
+bool ExecuteString(v8::Isolate* isolate, v8::Local<v8::String> source,
+                   v8::Local<v8::Value> name, bool print_result,
+                   bool report_exceptions) {
+  v8::HandleScope handle_scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  v8::ScriptOrigin origin(name);
+  v8::Local<v8::Context> context(isolate->GetCurrentContext());
+  v8::Local<v8::Script> script;
+  if (!v8::Script::Compile(context, source, &origin).ToLocal(&script)) {
+    // Print error that happened during compilation.
+    if (report_exceptions) {
+      ReportException(isolate, &try_catch);
+    }
+    return false;
+  } else {
+    v8::Local<v8::Value> result;
+    if (!script->Run(context).ToLocal(&result)) {
+      assert(try_catch.HasCaught());
+      // Print error that happened during execution.
+      if (report_exceptions) {
+        ReportException(isolate, &try_catch);
+      }
+      return false;
+    } else {
+      assert(!try_catch.HasCaught());
+      if (print_result && !result->IsUndefined()) {
+        // If all went well and the result wasn't IsUndefined then
+        // print the returned value.
+        v8::String::Utf8Value str(isolate, result);
+        const char* cstr = ToCString(str);
+        printf("%s\n", cstr);
+      }
+      return true;
+    }
+  }
+}
+
+void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
+  v8::HandleScope handle_scope(isolate);
+  v8::String::Utf8Value exception(isolate, try_catch->Exception());
+  const char* exception_string = ToCString();
+  v8::Local<v8::Message> message = try_catch->Message();
+  if (message.IsEmpty()) {
+    // V8 didn't provide any extra information about this error;
+    // just print the exception.
+    fprintf(stderr, "%s\n", exception_string);
+  } else {
+    // Print (filename):(line_number):(message).
+    v8::String::Utf8Value filename(isolate,
+                                   message->GetScriptOrigin().ResourceName());
+    v8::Local<v8::Context> context(isolate->GetCurrentContext());
+    const char* filename_string = ToCString(filename);
+    int linenum = message->GetLineNumber(context).FromJust();
+    fprintf(stderr, "%s:%i: %s\n", filename_string, linenum, exception_string);
+    // Print line of source code.
+    v8::String::Utf8Value sourceline(isolate, message->GetSourceLine(context).ToLocalChecked());
+    const char* sourceline_string = ToCString(sourceline);
+    fprintf(stderr, "%s\n", sourceline_string);
+    // Print wavy underline (GetUnderLine is deprecated).
+    int start = message->GetStartColumn(context).FromJust();
+    for (int i = 0; i < start; i++) {
+      fprintf(stderr, " ");
+    }
+    int end = message->GetEndColumn(context).FromJust();
+    for (int i = 0; i < end; i++) {
+      fprintf(stderr, "^");
+    }
+    fprintf(stderr, "\n");
+    v8::Local<v8::Value> stack_trace_string;
+    if (try_catch->StackTrace(context).ToLocal(&stack_trace_string) &&
+        stack_trace_string->IsString() &&
+        v8::Local<v8::String>::Cast(stack_trace_string)->Length() > 0) {
+      v8::String::Utf8Value stace_trace(isolate, stack_trace_string);
+      const char* stack_trace_string = ToCString(stace_trace);
+      fprintf(stderr, "%s\n", stack_trace_string);
+    }
+  }
+}

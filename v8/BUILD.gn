@@ -9,3 +9,13 @@ executable("hello_world_test") {
     "//v8:v8_libplatform",
   ]
 }
+
+executable("v8_shell_test") {
+  sources = [ "shell.cc" ]
+
+  deps = [
+    "//v8:v8",
+    "//v8:v8_libbase",
+    "//v8:v8_libplatform",
+  ]
+}
