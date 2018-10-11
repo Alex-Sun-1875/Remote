@@ -24,5 +24,6 @@ executable("main_test") {
     "//services/service_manager:service_manager",
     "//services/service_manager/background:lib",
     "v8:hello_world_test",
+    "v8:v8_shell_test",
   ]
 }

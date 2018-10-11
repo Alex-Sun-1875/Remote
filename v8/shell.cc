@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
   v8::V8::InitializePlatform(platform.get());
   v8::V8::Initialize();
-  v8::V8::SetFlagFromCommandLine(&argc, argv, true);
+  v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
   v8::Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
   v8::Isolate* isolate = v8::Isolate::New(create_params);
@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
   {
     v8::Isolate::Scope isolate_scope(isolate);
     v8::HandleScope handle_scope(isolate);
-    v8::Local<v8::Context> context = CreateShellContext();
+    v8::Local<v8::Context> context = CreateShellContext(isolate);
     if (context.IsEmpty()) {
       fprintf(stderr, "Error creating centext\n");
       return 1;
@@ -61,7 +61,7 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 }
 
 // Create a new execution environment containing the build-in function
-v8::Local<V8::Context> CreateShellContext(v8::Isolate* isolate) {
+v8::Local<v8::Context> CreateShellContext(v8::Isolate* isolate) {
   // Create a template for the global object.
   v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
   // Bind the global function to The C++ callback.
@@ -130,14 +130,14 @@ void Read(const v8::FunctionCallbackInfo<v8::Value>& args) {
 // The callback that is invoked by v8 whenever the JavaScript 'load'
 // function is called.  Loads, compiles and executes its argument
 // JavaScript file.
-void Load(v8::FunctionCallbackInfo<v8::Value>& args) {
+void Load(const v8::FunctionCallbackInfo<v8::Value>& args) {
   for (int i = 0; i < args.Length(); i++) {
     v8::HandleScope handle_scope(args.GetIsolate());
     v8::String::Utf8Value file(args.GetIsolate(), args[i]);
-    if (*file = NULL) {
+    if (*file == NULL) {
       args.GetIsolate()->ThrowException(
           v8::String::NewFromUtf8(args.GetIsolate(), "Error Loading file",
-                                  v8::NewStringType::knormal).ToLocalChecked());
+                                  v8::NewStringType::kNormal).ToLocalChecked());
       return;
     }
     v8::Local<v8::String> source;
@@ -158,7 +158,7 @@ void Load(v8::FunctionCallbackInfo<v8::Value>& args) {
 
 // The callback that is invoked by v8 whenever the JavaScript 'quit'
 // function is called.  Quits.
-void Quit(v8::FunctionCallbackInfo<v8::Value>& args) {
+void Quit(const v8::FunctionCallbackInfo<v8::Value>& args) {
   int exit_code = args[0]->Int32Value(args.GetIsolate()->GetCurrentContext()).FromMaybe(0);
   fflush(stdout);
   fflush(stderr);
@@ -207,7 +207,7 @@ int RunMain(v8::Isolate* isolate, v8::Platform* platform, int argc, char* argv[]
       continue;
     } else if (strncmp(str, "--", 2) == 0) {
       fprintf(stderr, "Warning: unknown flag %s.\nTry --help for options\n", str);
-    } else if (strcmp(strcmp, "-e") == 0 && i + 1 < argc) {
+    } else if (strcmp(str, "-e") == 0 && i + 1 < argc) {
       // Execute argument given to -e option directly.
       v8::Local<v8::String> file_name = v8::String::NewFromUtf8(isolate, "unnamed",
                                                                 v8::NewStringType::kNormal).ToLocalChecked();
@@ -257,7 +257,7 @@ void RunShell(v8::Local<v8::Context> context, v8::Platform* platform) {
         v8::String::NewFromUtf8(context->GetIsolate(), str,
                                 v8::NewStringType::kNormal).ToLocalChecked(),
         name, true, true);
-    while (v8::platform::PumpMessageLoop(platform, context->Isolate()))
+    while (v8::platform::PumpMessageLoop(platform, context->GetIsolate()))
       continue;
   }
   fprintf(stderr, "\n");
@@ -304,7 +304,7 @@ bool ExecuteString(v8::Isolate* isolate, v8::Local<v8::String> source,
 void ReportException(v8::Isolate* isolate, v8::TryCatch* try_catch) {
   v8::HandleScope handle_scope(isolate);
   v8::String::Utf8Value exception(isolate, try_catch->Exception());
-  const char* exception_string = ToCString();
+  const char* exception_string = ToCString(exception);
   v8::Local<v8::Message> message = try_catch->Message();
   if (message.IsEmpty()) {
     // V8 didn't provide any extra information about this error;
