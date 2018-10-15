@@ -124,3 +124,124 @@ class JsHttpRequestProcessor : public HttpRequestProcessor {
     static Global<ObjectTemplate> request_template_;
     static Global<ObjectTemplate> map_template_;
 };
+
+static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  if (args.Length() < 1) return;
+  Isolate* isolate = args.GetIsolate();
+  HandleScope scope(isolate);
+  Local<Value> arg = args[0];
+  String::Utf8Value value(isolate, arg);
+  HttpRequestProcessor::Log(*value);
+}
+
+// Execute the script and fetch the Process method.
+bool JsHttpRequestProcessor::Initialize(map<string, string>* opts,
+                                        map<string, string>* output) {
+  // Create a handle scope to hold the temporary references.
+  HandleScope handle_scope(GetIsolate());
+
+  // Create a template for the global object where we set the
+  // built-in global functions.
+  Local<ObjectTemplate> global = ObjectTemplate::New(GetIsolate());
+  global->Set(String::NewFromUtf8(GetIsolate(), "log", NewStringType::kNormal).ToLocalChecked(),
+              FunctionTemplate::New(GetIsolate(), LogCallback));
+
+  // Each processor gets its own context so different processors don't
+  // affect each other. Context::New returns a persistent handle which
+  // is what we need for the reference to remain after we return from
+  // this method. That persistent handle has to be disposed in the
+  // destructor.
+  Local<v8::Context> context = Context::New(GetIsolate(), NULL, global);
+  context_.Reset(context);
+
+  // Enter the new context so all the following operations take place
+  // within it.
+  Context::Scope context_scope(context);
+
+  // Make the options mapping available within the context
+  if (!InstallMaps(opts, output))
+    return false;
+
+  // Compile and run the script
+  if (!ExecuteScript(script_))
+    return false;
+
+  // The script compiled and ran correctly.  Now we fetch out the
+  // Process function from the global object.
+  Local<String> process_name = String::NewFromUtf8(GetIsolate(), "Process", NewStringType::kNormal).ToLocalChecked();
+  Local<Value> process_val;
+
+  // If there is no Process function, or if it is not a function,
+  // bail out
+  if (!context->Global()->Get(context, process_name).ToLocal(&process_val) || !process_val->IsFunction()) {
+    return false;
+  }
+
+  // It is a function; cast it to a Function
+  Local<Function> process_fun = Local<Function>::Cast(process_val);
+
+  // Store the function in a Global handle, since we also want
+  // that to remain after this call returns
+  process_.Reset(GetIsolate(), process_fun);
+
+  // All done; all went well
+  return true;
+}
+
+bool JsHttpRequestProcessor::ExecuteScript(Local<String> script) {
+  HandleScope handle_scope(GetIsolate());
+
+  // We're just about to compile the script; set up an error handler to
+  // catch any exceptions the script might throw.
+  TryCatch try_catch(GetIsolate());
+
+  Local<Context> context(GetIsolate()->GetCurrentContext());
+
+  // Compile the script and check for errors.
+  Local<Script> compiled_script;
+  if (!Script::Compile(context, script).ToLocal(compiled_script)) {
+    String::Utf8Value error(GetIsolate(), try_catch.Exception());
+    Log(*error);
+
+    // The script failed to compile; bail out.
+    return false;
+  }
+
+  // Run the script!
+  Local<Value> result;
+  if (!compiled_script->Run(context).ToLocal(&result)) {
+    // The TryCatch above is still in effect and will have caught the error.
+    String::Utf8Value error(GetIsolate(), try_catch.Exception());
+    Log(*error);
+    //Running the script failed; bail out.
+    return false;
+  }
+
+  return true;
+}
+
+bool JsHttpRequestProcessor::InstallMaps(map<string, string>* opts,
+                                         map<string, string>* output) {
+  HandleScope handle_scope(GetIsolate());
+
+  // Wrap the map object in a JavaScript wrapper
+  Local<Object> opts_obj = WrapMap(opts);
+
+  v8::Local<v8::Context> context = v8::Local<v8::Context>::New(GetIsolate(), context_);
+
+  // Set the options object as a property on the global object.
+  context->Global()
+      ->Set(context,
+            String::NewFromUtf8(GetIsolate(), "options", NewStringType::kNormal).ToLocalChecked(),
+            opts_obj)
+      .FromJust();
+
+  Local<Object> output_obj;
+  context->Global()
+      ->Set(context,
+            String::NewFromUtf8(GetIsolate(), "output", NewStringType::kNormal).ToLocalChecked(),
+            output_obj)
+      .FromJust();
+
+  return true;
+}
