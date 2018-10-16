@@ -245,3 +245,44 @@ bool JsHttpRequestProcessor::InstallMaps(map<string, string>* opts,
 
   return true;
 }
+
+bool JsHttpRequestProcessor::Process(HttpRequest* request) {
+  // Create a handle scope to keep the temporary object references.
+  HandleScope handle_scope(GetIsolate());
+
+  v8::Local<v8::Context> context = v8::Local<v8::Context>::New(GetIsolate(), context_);
+
+  // Enter this processor's context so all the remaining operations
+  // take place there
+  v8::Context::Scope context_scope(context);
+
+  // Wrap the C++ request object in a JavaScript wrapper
+  Local<Object> request_obj = WrapRequest(request);
+
+  // Set up an exception handler before calling the Process function
+  TryCatch try_catch(GetIsolate());
+
+  // Invoke the process function, giving the global object as 'this'
+  // and one argument, the request.
+  const int argc = 1;
+  Local<Value> argv[argc] = {request_obj};
+  v8::Local<v8::Function> process = v8::Local<v8::Function>::New(GetIsolate(), process_);
+  v8::Local<v8::Value> result;
+  if (!process->Call(context, context->Global(), argc, argv).ToLocal(&result)) {
+    v8::String::Utf8Value error(GetIsolate(), try_catch.Exception());
+    Log(*error);
+    return false;
+  }
+  return true;
+}
+
+JsHttpRequestProcessor::~JsHttpRequestProcessor() {
+  // Dispose the persistent handles.  When no one else has any
+  // references to the objects stored in the handles they will be
+  // automatically reclaimed.
+  context_.Reset();
+  process_.Reset();
+}
+
+Global<ObjectTemplate> JsHttpRequestProcessor::request_template_;
+Global<ObjectTemplate> JsHttpRequestProcessor::map_template_;
