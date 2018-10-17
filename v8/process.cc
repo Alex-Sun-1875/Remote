@@ -286,3 +286,72 @@ JsHttpRequestProcessor::~JsHttpRequestProcessor() {
 
 Global<ObjectTemplate> JsHttpRequestProcessor::request_template_;
 Global<ObjectTemplate> JsHttpRequestProcessor::map_template_;
+
+// Utility function that wraps a C++ http request object in a
+// JavaScript object.
+Local<Object> JsHttpRequestProcessor::WrapMap(map<string, string> opts) {
+  // Local scope for temporary handles.
+  EscapableHandleScope handle_scope(GetIsolate());
+
+  // Fetch the template for creating JavaScript map wrappers.
+  // It only has to be created once, which we do on demand.
+  if (map_template_.IsEmpty()) {
+    Local<Object> raw_template = MakeMapTemplate(GetIsolate());
+    map_template_.Reset(raw_template);
+  }
+  Local<ObjectTemplate> templ = Local<ObjectTemplate>::New(GetIsolate(), map_template_);
+
+  // Create an empty map wrapper.
+  Local<Object> result = templ->NewInstance(GetIsolate()->GetCurrentContext()).ToLocalChecked();
+
+  // Wrap the raw C++ pointer in an External so it can be referenced
+  // from within JavaScript.
+  Local<External> map_ptr = External::New(GetIsolate(), obj);
+
+  // Store the map pointer in the JavaScript wrapper.
+  result->SetInternalField(0, map_ptr);
+
+  // Return the result through the current handle scope.  Since each
+  // of these handles will go away when the handle scope is deleted
+  // we need to call Close to let one, the result, escape into the
+  // outer handle scope.
+  return handle_scope.Escape(result);
+}
+
+// Utility function that extracts the C++ map pointer from a wrapper
+// object.
+map<string, string>* JsHttpRequestProcessor::UnwrapMap(Local<Object> obj) {
+  Local<External> field = Local<External>::Cast(obj->GetInternalField(0));
+  void* ptr = field->Value();
+  return static_cast<map<string, string>*>(ptr);
+}
+
+// Convert a JavaScript string to a std::string.  To not bother too
+// much with string encodings we just use ascii.
+string ObjectToString(v8::Isolate* isolate, Local<Value> value) {
+  String::Utf8Value utf8_value(isolate, value);
+  return string(*utf8_value);
+}
+
+void JsHttpRequestProcessor::MapGet(Local<Name> name,
+                                    const PropertyCallbackInfo<Value>& info) {
+  if (name->IsSymbol()) return;
+
+  // Fetch the map wrapped by this object.
+  map<string, string>* obj = UnwrapMap(info.Holder());
+
+  // Convert the JavaScript string to a std::string.
+  string key = ObjectToString(info.GetIsolate(), Local<String>::Cast(name));
+
+  // Look up the value if it exists using the standard STL ideom.
+  map<string, string>::iterator iter = obj->find(key);
+
+  if (iter == obj->end()) return;
+
+  // If the key is not present return an empty handle as signal
+  const string& value = (*iter).second();
+
+  // Otherwise fetch the value and wrap it in a JavaScript string
+  info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), value.c_str(), NewStringType::kNormal,
+                                                static_cast<int>(value.length())).ToLocalChecked());
+}
