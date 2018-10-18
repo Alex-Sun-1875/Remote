@@ -355,3 +355,21 @@ void JsHttpRequestProcessor::MapGet(Local<Name> name,
   info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), value.c_str(), NewStringType::kNormal,
                                                 static_cast<int>(value.length())).ToLocalChecked());
 }
+
+void JsHttpRequestProcessor::MapSet(Local<Name> name, Local<Value> value_obj,
+                                    const PropertyCallbackInfo<Value>& info) {
+  if (name->IsSymbol()) return;
+
+  // Fetch the map wrapped by this object.
+  map<string, string>* obj = UnwrapMap(info.Holder());
+
+  // Convert the key and value to std::strings.
+  string key = ObjectToString(info.GetIsolate(), Local<String>::Cast(name));
+  string value = ObjectToString(info.GetIsolate(), value_obj);
+
+  // Update the map.
+  (*obj)[key] = value;
+
+  // Return the value; any non-empty handle will work.
+  info.GetReturnValue().Set(value_obj);
+}
