@@ -373,3 +373,92 @@ void JsHttpRequestProcessor::MapSet(Local<Name> name, Local<Value> value_obj,
   // Return the value; any non-empty handle will work.
   info.GetReturnValue().Set(value_obj);
 }
+
+Local<ObjectTemplate> JsHttpRequestProcessor::MakeMapTemplate(Isolate* isolate) {
+  EscapableHandleScope handle_scope(isolate);
+
+  Local<ObjectTemplate> result = ObjectTemplate::New(isolate);
+  result->SetInternalFieldCount(1);
+  result->SetHandle(NamedPropertyHandlerConfiguration(MapGet, MapSet));
+
+  // Again, return the result through the current handle scope.
+  return handle_scope.Escape(result);
+}
+
+// -------------------------------------------
+// --- A c c e s s i n g   R e q u e s t s ---
+// -------------------------------------------
+
+/**
+ * Utility function that wraps a C++ http request object in a
+ * JavaScript object.
+ */
+Local<Object> JsHttpRequestProcessor::WrapRequest(HttpRequest* request) {
+  // Local scope for temporary handles.
+  EscapableHandleScope handle_scope(GetIsolate());
+
+  // Fetch the template for creating JavaScript http request wrappers.
+  // It only has to be created once, which we do on demand.
+  if (request_template_.IsEmpty()) {
+    Local<ObjectTemplate> raw_template = MakeRequestTemplate(GetIsolate());
+    request_template_.Reset(GetIsolate(), raw_template);
+  }
+
+  Local<ObjectTemplate> templ = Local<ObjectTemplate>::New(GetIsolate(), request_template_);
+
+  // Create an empty http request wrapper.
+  Local<Object> result = templ->NewInstance(GetIsolate()->GetCurrentContext()).ToLocalChecked();
+
+  // Wrap the raw C++ pointer in an External so it can be referenced
+  // from within JavaScript.
+  Local<External> request_ptr = External::New(GetIsolate(), request);
+
+  // Store the request pointer in the JavaScript wrapper.
+  result->SetInternalField(0, request_ptr);
+
+  // Return the result through the current handle scope.  Since each
+  // of these handles will go away when the handle scope is deleted
+  // we need to call Close to let one, the result, escape into the
+  // outer handle scope.
+  return handle_scope.Escape(result);
+}
+
+/**
+ * Utility function that extracts the C++ http request object from a
+ * wrapper object.
+ */
+HttpRequest* JsHttpRequestProcessor::UnwrapRequest(Local<Object> obj) {
+  Local<External> field = Local<External>::Cast(obj->GetInternalField(0));
+  void* ptr = field->Value();
+  return static_cast<HttpRequest*>(ptr);
+}
+
+void JsHttpRequestProcessor::GetPath(Local<String> name,
+                                     const PropertyCallbackInfo<Value>& info) {
+  // Extract the C++ request object from the JavaScript wrapper.
+  HttpRequest* request = UnwrapRequest(info.Holder());
+
+  // Fetch the path.
+  const string& path = request->Path();
+
+  // Wrap the result in a JavaScript string and return it.
+  info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), path.c_str(),
+                                                NewStringType::kNormal,
+                                                static_cast<int>(path.length())).ToLocalChecked());
+}
+
+void JsHttpRequestProcessor::GetReferrer(Local<String> name,
+                                         const PropertyCallbackInfo<Value>& info) {
+  HttpRequest* request = UnwrapRequest(info.Holder());
+  const string& referrer = request->Referrer();
+  info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), referrer.c_str(), NewStringType::kNormal,
+                                                static_cast<int>(referrer.length())).ToLocalChecked());
+}
+
+void JsHttpRequestProcessor::GetHost(Local<String> name,
+                                     const PropertyCallbackInfo<Value>& info) {
+  HttpRequest* request = UnwrapRequest(info.Holder());
+  const string& host = request->Host();
+  info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), host.c_str(), NewStringType::kNormal,
+                                                static_cast<int>(host.length())).ToLocalChecked());
+}

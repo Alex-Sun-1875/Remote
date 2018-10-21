@@ -35,9 +35,11 @@ build_target:
 	@echo "======================== Build End =========================";
 
 build_test:
-	@echo "===================== Build Test Start =====================";
-	autoninja -C $(ROOT_DIR)/$(BUILD_DIR) $(test)
-	@echo "====================== Build Test End ======================";
+	@if [ $(tg) == "remote_main" ]; then \
+		echo "===================== Build Test Start ====================="; \
+		autoninja -C $(ROOT_DIR)/$(BUILD_DIR) $(test); \
+		echo "====================== Build Test End ======================"; \
+	fi
 
 install:
 
