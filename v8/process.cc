@@ -462,3 +462,39 @@ void JsHttpRequestProcessor::GetHost(Local<String> name,
   info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), host.c_str(), NewStringType::kNormal,
                                                 static_cast<int>(host.length())).ToLocalChecked());
 }
+
+void JsHttpRequestProcessor::GetUserAgent(Local<String> name,
+                                          const PropertyCallbackInfo<Value>& info) {
+  HttpRequest* request = UnwrapRequest(info.Holder());
+  const string& user_agent = request->UserAgent();
+  info.GetReturnValue().Set(String::NewFromUtf8(info.GetIsolate(), user_agent.c_str(), NewStringType::kNormal,
+                                                static_cast<int>(user_agent.length())).ToLocalChecked());
+}
+
+Local<ObjectTemplate> JsHttpRequestProcessor::MakeMapTemplate(Isolate* isolate) {
+  EscapableHandleScope handle_scope(isolate);
+
+  Local<ObjectTemplate> result = ObjectTemplate::New(isolate);
+  result->SetInternalFieldCount(1);
+
+  // Add accessor for each of the fields of the request.
+  result->SetAccessor(
+      String::NewFromUtf8(isolate, "path", NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetPath);
+  result->SetAccessor(
+      String::NewFromUtf8(isolate, "referrer", NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetReferrer);
+  result->SetAccessor(
+      String::NewFromUtf8(isolate, "host", NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetHost);
+  result->SetAccessor(
+      String::NewFromUtf8(isolate, "userAgent", NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetUserAgent);
+
+  // Again, return the result through the current handle scope.
+  return handle_scope.Escape(result);
+}
