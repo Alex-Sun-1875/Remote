@@ -498,3 +498,76 @@ Local<ObjectTemplate> JsHttpRequestProcessor::MakeMapTemplate(Isolate* isolate) 
   // Again, return the result through the current handle scope.
   return handle_scope.Escape(result);
 }
+
+void JsHttpRequestProcessor::Log(const char* event) {
+  printf("Logged: %s\n", event);
+}
+
+class StringHttpRequest : public HttpRequest {
+  public:
+    StringHttpRequest(const string& path,
+                      const string& referrer,
+                      const string& host,
+                      const string& user_agent);
+    virtual const string& Path() { return path_; }
+    virtual const string& Referrer() { return referrer_; }
+    virtual const string& Host() { return host_; }
+    virtual const string& UserAgent() { return user_agent_ ;}
+
+  private:
+    string path_;
+    string referrer_;
+    string host_;
+    string user_agent_;
+};
+
+StringHttpRequest::StringHttpRequest(const string& path,
+                                     const string& referrer,
+                                     const string& host,
+                                     const string& user_agent)
+    : path_(path),
+      referrer_(referrer),
+      host_(host),
+      user_agent_(user_agent) { }
+
+void ParseOptions(int argc, char* argv[],
+                  map<string, string>* options,
+                  string* file) {
+  for (int i = 0; i < argc; ++i) {
+    string arg = argv[i];
+    size_t index = arg.find("=", 0);
+    if (string::npos == index) {
+      *file = arg;
+    } else {
+      string key = arg.substr(0, index);
+      string value = arg.substr(index + 1);
+      (*options)[key] = value;
+    }
+  }
+}
+
+// Read a file into a v8 string.
+MaybeLocal<String> ReadFile(Isolate* isolate, const string& name) {
+  FILE* file = fopen(name, "rb");
+
+  if (NULL == file) return MaybeLocal<String>();
+
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  rewind(file);
+
+  std::unique_ptr<char> chars(new char[size + 1]);
+  chars.get()[size] = "\0";
+  for (size_t i = 0; i < size;) {
+    i += fread(&chars.get()[i], 1, size -i, file);
+    if (ferror(file)) {
+      fclose(file);
+      return MaybeLocal<String>();
+    }
+  }
+  fclose(file);
+  MaybeLocal<String> result = String::NewFromUtf8(
+      isolate, chars.get(), NewStringType::kNormal, static_cast<int>(size));
+
+  return result;
+}
