@@ -19,3 +19,13 @@ executable("v8_shell_test") {
     "//v8:v8_libplatform",
   ]
 }
+
+executable("v8_process_sample") {
+  sources = [ "process.cc" ]
+
+  deps = [
+    "//v8:v8",
+    "//v8:v8_libbase",
+    "//v8:v8_libplatform",
+  ]
+}
