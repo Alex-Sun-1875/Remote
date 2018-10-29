@@ -236,7 +236,7 @@ bool JsHttpRequestProcessor::InstallMaps(map<string, string>* opts,
             opts_obj)
       .FromJust();
 
-  Local<Object> output_obj;
+  Local<Object> output_obj = WrapMap(output);
   context->Global()
       ->Set(context,
             String::NewFromUtf8(GetIsolate(), "output", NewStringType::kNormal).ToLocalChecked(),
