@@ -65,5 +65,55 @@ class JsHttpRequestProcessor : public HttpRequestProcessor {
 
     v8::Isolate* GetIsolate() { return isolate_; }
 
-    v8::Isolate
+    v8::Isolate* isolate_;
+    v8::Local<v8::String> script_;
+    v8::Global<v8::Context> context_;
+    v8::Global<v8::Function> process_;
+    static v8::Global<v8::ObjectTemplate> request_template_;
+    static v8::Global<v8::ObjectTemplate> map_request_;
 };
+
+static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  if (args.Length() < 1) return;
+  v8::Isolate* isolate = args.GetIsolate();
+  v8::HandleScope handle_scope(isolate);
+  v8::Local<v8::Value> arg = args[0];
+  v8::String::Utf8Value value(isolate, arg);
+  HttpRequestProcessor::Log(*value);
+}
+
+bool JsHttpRequestProcessor::Initialize(std::map<std::string, std::string>* opts,
+                                        std::map<std::string, std::string>* output) {
+  v8::HandleScope handle_scope(GetIsolate());
+
+  v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(GetIsolate());
+  global->Set(v8::String::NewFromUtf8(GetIsolate(), "log", v8::NewStringType::kNormal)
+                .ToLocalChecked(),
+              v8::FunctionTemplate::New(GetIsolate(), LogCallback));
+
+  v8::Local<v8::Context> context = v8::Context::New(GetIsolate(), NULL, global);
+  context_.Reset(GetIsolate(), context);
+
+  v8::Context::Scope context_scope(context);
+
+  if (!InstallMaps(opts, output))
+    return false;
+
+  if (!ExecuteScript(script_))
+    return false;
+
+  v8::Local<v8::String> process_name = v8::String::NewFromUtf8(GetIsolate(), "Process",
+                                                               v8::NewStringType::kNormal)
+                                          .ToLocalChecked();
+  v8::Local<v8::Value> process_val;
+  if (!context->Global()->Get(context, process_name).ToLocal(&process_val) ||
+      !process_val->IsFunction()) {
+    return false;
+  }
+
+  v8::Local<v8::Function> process_fun = v8::Local<v8::Function>::Cast(process_val);
+
+  process_.Reset(GetIsolate(), process_fun);
+
+  return true;
+}
