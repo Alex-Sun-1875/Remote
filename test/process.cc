@@ -117,3 +117,79 @@ bool JsHttpRequestProcessor::Initialize(std::map<std::string, std::string>* opts
 
   return true;
 }
+
+bool JsHttpRequestProcessor::ExecuteScript(v8::Local<v8::String> script) {
+  v8::HandleScope handle_scope(GetIsolate());
+
+  v8::TryCatch try_catch(GetIsolate());
+
+  v8::Local<v8::Context> context(GetIsolate()->GetCurrentContext());
+
+  v8::Local<v8::Script> compiled_script;
+  if (!v8::Script::Compile(context, script).ToLocal(&compiled_script)) {
+    v8::String::Utf8Value error(GetIsolate(), try_catch.Exception());
+    Log(*error);
+    return false;
+  }
+
+  v8::Local<v8::Value> result;
+  if (!compiled_script->Run(context).ToLocal(&result)) {
+    v8::String::Utf8Value error(GetIsolate(), try_catch.Exception());
+    Log(*error);
+    return false;
+  }
+
+  return true;
+}
+
+bool JsHttpRequestProcessor::InstallMaps(std::map<std::string, std::string>* opts,
+                                         std::map<std::string, std::string>* output) {
+  v8::HandleScope handle_scope(GetIsolate());
+
+  v8::Local<v8::Object> opts_obj = WrapMap(opts);
+
+  v8::Local<v8::Context> context = v8::Local<v8::Context>::New(GetIsolate(), context_);
+
+  context->Global()
+      ->Set(context,
+            v8::String::NewFromUtf8(GetIsolate(), "options", v8::NewStringType::kNormal)
+                .ToLocalChecked(),
+            opts_obj)
+        .FromJust();
+
+  v8::Local<v8::Object> output_obj = WrapMap(output);
+  context->Global()
+      ->Set(context,
+            v8::String::NewFromUtf8(GetIsolate(), "output", v8::NewStringType::kNormal)
+                .ToLocalChecked(),
+            output_obj)
+        .FromJust();
+
+  return true;
+}
+
+bool JsHttpRequestProcessor::Process(HttpRequest* req) {
+  v8::HandleScope handle_scope(GetIsolate());
+
+  v8::Local<v8::Context> context =
+      v8::Local<v8::Context>::New(GetIsolate(), context_);
+
+  v8::Context::Scope context_scope(context);
+
+  v8::Local<v8::Object> request_obj = WrapRequest(req);
+
+  v8::TryCatch try_catch(GetIsolate());
+
+  const int argc = 1;
+  v8::Local<v8::Value> argv[argc] = {request_obj};
+  v8::Local<v8::Function> process =
+      v8::Local<v8::Function>::New(GetIsolate(), process_);
+  v8::Local<v8::Value> result;
+  if (!process->Call(context, context->Global(), argc, argv).ToLocal(&result)) {
+    v8::String::Utf8Value error(GetIsolate(), try_catch.Exception());
+    Log(*error);
+    return false;
+  }
+
+  return true;
+}
