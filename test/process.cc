@@ -70,7 +70,7 @@ class JsHttpRequestProcessor : public HttpRequestProcessor {
     v8::Global<v8::Context> context_;
     v8::Global<v8::Function> process_;
     static v8::Global<v8::ObjectTemplate> request_template_;
-    static v8::Global<v8::ObjectTemplate> map_request_;
+    static v8::Global<v8::ObjectTemplate> map_template_;
 };
 
 static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -193,3 +193,11 @@ bool JsHttpRequestProcessor::Process(HttpRequest* req) {
 
   return true;
 }
+
+JsHttpRequestProcessor::~JsHttpRequestProcessor() {
+  context_.Reset();
+  process_.Reset();
+}
+
+v8::Global<v8::ObjectTemplate> JsHttpRequestProcessor::request_template_;
+v8::Global<v8::ObjectTemplate> JsHttpRequestProcessor::map_template_;
