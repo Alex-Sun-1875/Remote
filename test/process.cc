@@ -201,3 +201,54 @@ JsHttpRequestProcessor::~JsHttpRequestProcessor() {
 
 v8::Global<v8::ObjectTemplate> JsHttpRequestProcessor::request_template_;
 v8::Global<v8::ObjectTemplate> JsHttpRequestProcessor::map_template_;
+
+v8::Local<v8::Object> JsHttpRequestProcessor::WrapMap(std::map<std::string, std::string>* obj) {
+  v8::EscapableHandleScope handle_scope(GetIsolate());
+
+  if (map_template_.IsEmpty()) {
+    v8::Local<v8::ObjectTemplate> raw_template = MakeMapTemplate(obj);
+    map_template_.Reset(GetIsolate(), raw_template);
+  }
+
+  v8::Local<v8::ObjectTemplate> templ =
+      v8::Local<v8::ObjectTemplate>::New(GetIsolate(), map_template_);
+
+  v8::Local<v8::Object> result =
+      templ->NewInstance(GetIsolate()->GetCurrentContext()).ToLocalChecked();
+
+  v8::Local<v8::External> map_ptr = v8::External::New(GetIsolate(), obj);
+
+  result->SetInternalField(0, map_ptr);
+
+  return handle_scope.Escape(result);
+}
+
+std::map<std::string, std::string>* UnwrapMap(v8::Local<v8::Object> obj) {
+  v8::Local<v8::External> field = v8::Local<v8::External>::Cast(obj->GetInternalField(0));
+  void* ptr = field->Value();
+  return static_cast<std::map<std::string, std::string>*>(ptr);
+}
+
+std::string ObjectToString(v8::Isolate* isolate, v8::Local<v8::Value> value) {
+  v8::String::Utf8Value utf8_value(isolate, value);
+  return std::string(*utf8_value);
+}
+
+void JsHttpRequestProcessor::MapGet(v8::Local<v8::Name> name,
+                                    const v8::PropertyCallbackInfo<v8::Value>& info) {
+  if (name->IsSymbol()) return;
+
+  std::map<std::string, std::string>* obj = UnwrapMap(info.Holder());
+
+  std::string key = ObjectToString(GetIsolate(), v8::Local<v8::String>::Cast(name));
+
+  std::map<std::string, std::string>::iterator iter = obj->find(key);
+
+  if (iter == obj->end()) return;
+
+  const std::string& value = iter->second;
+  info.GetReturnValue().Set(
+      v8::String::NewFromUtf8(info.GetIsolate(), value.c_str(),
+                              v8::NewStringType::kNormal,
+                              static_cast<int>(value.length())).ToLocalChecked());
+}
