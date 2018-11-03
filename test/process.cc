@@ -252,3 +252,17 @@ void JsHttpRequestProcessor::MapGet(v8::Local<v8::Name> name,
                               v8::NewStringType::kNormal,
                               static_cast<int>(value.length())).ToLocalChecked());
 }
+
+void JsHttpRequestProcessor::MapSet(v8::Local<v8::Name> name, v8::Local<v8::Value> value_obj,
+                                    const v8::PropertyCallbackInfo<v8::Value>& info) {
+  if (name->IsSymbol()) return;
+
+  std::map<std::string, std::string>* obj = UnwrapMap(info.Holder());
+
+  std::string key = ObjectToString(info.GetIsolate(), v8::Local<v8::String>::Cast(name));
+  std::string value = ObjectToString(info.GetIsolate(), value_obj);
+
+  (*obj)[key] = value;
+
+  info.GetReturnValue().Set(value_obj);
+}
