@@ -10,16 +10,16 @@
 class HttpRequest {
   public:
     virtual ~HttpRequest() { }
-    virtual const string& Path() = 0;
-    virtual const string& Referrer() = 0;
-    virtual const string& Host() = 0;
-    virtual const string& UserAgent() = 0;
+    virtual const std::string& Path() = 0;
+    virtual const std::string& Referrer() = 0;
+    virtual const std::string& Host() = 0;
+    virtual const std::string& UserAgent() = 0;
 };
 
 class HttpRequestProcessor {
   public:
     virtual ~HttpRequestProcessor() { }
-    virtial bool Initialize(std::map<std::string, std::string>* options,
+    virtual bool Initialize(std::map<std::string, std::string>* options,
                             std::map<std::string, std::string>* output) = 0;
     virtual bool Process(HttpRequest* req) = 0;
     static void Log(const char* event);
@@ -27,7 +27,7 @@ class HttpRequestProcessor {
 
 class JsHttpRequestProcessor : public HttpRequestProcessor {
   public:
-    JsHttpRequestProcessor(v8::Isolate* isolate, v8::Local<String> script)
+    JsHttpRequestProcessor(v8::Isolate* isolate, v8::Local<v8::String> script)
         : isolate_(isolate), script_(script) {}
     virtual ~JsHttpRequestProcessor();
 
@@ -206,7 +206,7 @@ v8::Local<v8::Object> JsHttpRequestProcessor::WrapMap(std::map<std::string, std:
   v8::EscapableHandleScope handle_scope(GetIsolate());
 
   if (map_template_.IsEmpty()) {
-    v8::Local<v8::ObjectTemplate> raw_template = MakeMapTemplate(obj);
+    v8::Local<v8::ObjectTemplate> raw_template = MakeMapTemplate(GetIsolate());
     map_template_.Reset(GetIsolate(), raw_template);
   }
 
@@ -265,4 +265,208 @@ void JsHttpRequestProcessor::MapSet(v8::Local<v8::Name> name, v8::Local<v8::Valu
   (*obj)[key] = value;
 
   info.GetReturnValue().Set(value_obj);
+}
+
+v8::Local<v8::ObjectTemplate> JsHttpRequestProcessor::MakeMapTemplate(v8::Isolate* isolate) {
+  v8::EscapableHandleScope handle_scope(isolate);
+
+  v8::Local<v8::ObjectTemplate> result = v8::ObjectTemplate::New(isolate);
+  result->SetInternalFieldCount(1);
+  result->SetHandler(v8::NamedPropertyHandlerConfiguration(MapGet, MapSet));
+
+  return handle_scope.Escape(result);
+}
+
+v8::Local<v8::Object> JsHttpRequestProcessor::WrapRequest(HttpRequest* request) {
+  v8::EscapableHandleScope handle_scope(GetIsolate());
+
+  if (request_template_.IsEmpty()) {
+    v8::Local<v8::ObjectTemplate> raw_template = MakeRequestTemplate(GetIsolate());
+    request_template_.Reset(GetIsolate(), raw_template);
+  }
+
+  v8::Local<v8::ObjectTemplate> templ =
+      v8::Local<v8::ObjectTemplate>::New(GetIsolate(), request_template_);
+
+  v8::Local<v8::Object> result =
+      templ->NewInstance(GetIsolate()->GetCurrentContext()).ToLocalChecked();
+
+  v8::Local<v8::External> request_ptr = v8::External::New(GetIsolate(), request);
+
+  result->SetInternalField(0, request_ptr);
+
+  return handle_scope.Escape(result);
+}
+
+HttpRequest* JsHttpRequestProcessor::UnwrapRequest(v8::Local<v8::Object> obj) {
+  v8::Local<v8::External> field = v8::Local<v8::External>::Cast(obj->GetInternalField(0));
+  void* ptr = field->Value();
+  return static_cast<HttpRequest*>(ptr);
+}
+
+v8::Local<v8::ObjectTemplate> JsHttpRequestProcessor::MakeRequestTemplate(v8::Isolate* isolate) {
+  v8::EscapableHandleScope handle_scope(isolate);
+
+  v8::Local<v8::ObjectTemplate> result = v8::ObjectTemplate::New(isolate);
+  result->SetInternalFieldCount(1);
+
+  result->SetAccessor(
+      v8::String::NewFromUtf8(isolate, "path", v8::NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetPath);
+  result->SetAccessor(
+      v8::String::NewFromUtf8(isolate, "referrer", v8::NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetReferrer);
+  result->SetAccessor(
+      v8::String::NewFromUtf8(isolate, "host", v8::NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetHost);
+  result->SetAccessor(
+      v8::String::NewFromUtf8(isolate, "userAgent", v8::NewStringType::kInternalized)
+          .ToLocalChecked(),
+      GetUserAgent);
+
+  return handle_scope.Escape(result);
+}
+
+void HttpRequestProcessor::Log(const char* event) {
+  printf("Logged: %s\n", event);
+}
+
+class StringHttpRequest : public HttpRequest {
+  public:
+    StringHttpRequest(const std::string& path,
+                      const std::string& referrer,
+                      const std::string& host,
+                      const std::string& user_agent);
+    virtual const std::string& Path() { return path_; }
+    virtual const std::string& Referrer() { return referrer_; }
+    virtual const std::string& Host() { return host_; }
+    virtual const std::string& UserAgent() { return user_agent_; }
+
+  private:
+    std::string path_;
+    std::string referrer_;
+    std::string host_;
+    std::string user_agent_;
+};
+
+StringHttpRequest::StringHttpRequest(const std::string& path,
+                                     const std::string& referrer,
+                                     const std::string& host,
+                                     const std::string& user_agent)
+    : path_(path),
+      referrer_(referrer),
+      host_(host),
+      user_agent_(user_agent) { }
+
+void ParseOptions(int argc,
+                  char* argv[],
+                  std::map<std::string, std::string>* options,
+                  std::string* file) {
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    std::size_t index = arg.find('=', 0);
+    if (index == std::string::npos) {
+      *file = arg;
+    } else {
+      std::string key = arg.substr(0, index);
+      std::string value = arg.substr(index + 1);
+      (*options)[key] = value;
+    }
+  }
+}
+
+v8::MaybeLocal<v8::String> ReadFile(v8::Isolate* isolate,
+                                    const std::string& name) {
+  FILE* file = fopen(name.c_str(), "rb");
+  if (NULL == file) return v8::MaybeLocal<v8::String>();
+
+  fseek(file, 0, SEEK_END);
+  std::size_t size = ftell(file);
+  rewind(file);
+
+  std::unique_ptr<char> chars(new char[size + 1]);
+  chars.get()[size] = '\0';
+  for (std::size_t i = 0; i < size;) {
+    i += fread(&chars.get()[i], 1, size - i, file);
+    if (ferror(file)) {
+      fclose(file);
+      return v8::MaybeLocal<v8::String>();
+    }
+  }
+  fclose(file);
+  v8::MaybeLocal<v8::String> result =
+      v8::String::NewFromUtf8(isolate, chars.get(),
+                              v8::NewStringType::kNormal,
+                              static_cast<int>(size));
+
+  return result;
+}
+
+const int kSampleSize = 6;
+StringHttpRequest kSampleRequests[kSampleSize] = {
+  StringHttpRequest("/process.cc", "localhost", "google.com", "firefox"),
+  StringHttpRequest("/", "localhost", "google.net", "firefox"),
+  StringHttpRequest("/", "localhost", "google.org", "safari"),
+  StringHttpRequest("/", "localhost", "yahoo.com", "ie"),
+  StringHttpRequest("/", "localhost", "yahoo.com", "safari"),
+  StringHttpRequest("/", "localhost", "yahoo.com", "firefox")
+};
+
+bool ProcessEntries(v8::Platform* platform, HttpRequestProcessor* processor,
+                    int count, StringHttpRequest* reqs) {
+  for (int i = 0; i < count; ++i) {
+    bool result = processor->Process(&reqs[i]);
+    while (v8::platform::PumpMessageLoop(platform, v8::Isolate::GetCurrent()))
+      continue;
+    if (!result) return false;
+  }
+  return true;
+}
+
+void PrintMap(std::map<std::string, std::string>* m) {
+  for (std::map<std::string, std::string>::iterator it = m->begin(); it != m->end(); ++it) {
+    std::pair<std::string, std::string> entry = *it;
+    printf("%s: %s\n", entry.first.c_str(), entry.second.c_str());
+  }
+}
+
+int main(int argc, char* argv[]) {
+  v8::V8::InitializeICUDefaultLocation(argv[0]);
+  v8::V8::InitializeExternalStartupData(argv[0]);
+  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+  v8::V8::InitializePlatform(platform.get());
+  v8::V8::Initialize();
+  std::map<std::string, std::string> options;
+  std::string file;
+  ParseOptions(argc, argv, &options, &file);
+  if (file.empty()) {
+    fprintf(stderr, "No script was specified.\n");
+    return 1;
+  }
+  v8::Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator =
+      v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  v8::Isolate* isolate = v8::Isolate::New(create_params);
+  v8::Isolate::Scope isolate_scope(isolate);
+  v8::HandleScope handle_scope(isolate);
+  v8::Local<v8::String> source;
+  if (!ReadFile(isolate, file).ToLocal(&source)) {
+    fprintf(stderr, "Error reading '%s'.\n", file.c_str());
+    return 1;
+  }
+  JsHttpRequestProcessor processor(isolate, source);
+  std::map<std::string, std::string> output;
+  if (!processor.Initialize(&options, &output)) {
+    fprintf(stderr, "Error initializing processor.\n");
+    return 1;
+  }
+  if (!ProcessEntries(platform.get(), &processor, kSampleSize, kSampleRequests)) {
+    return 1;
+  }
+  PrintMap(&output);
+
+  return 0;
 }
