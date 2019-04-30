@@ -28,3 +28,9 @@ executable("main_test") {
     "v8:v8_process_sample",
   ]
 }
+
+shared_library("mojo_main") {
+  include_dirs = []
+  sources = []
+  deps = [ "mojo:db_mojom" ]
+}

@@ -13,12 +13,16 @@ generate:
 	@cd $(ROOT_DIR); \
 	if [ ! -d $(BUILD_DIR) ]; then \
 		if [ "Release" == "$(BUILD_TARGET)" ]; then \
-			gn gen $(BUILD_DIR) --args=$(RELEASE_BUILD_PARAM); \
+			gn gen $(BUILD_DIR) $(IDE) --filters=//chrome --args=$(RELEASE_BUILD_PARAM); \
 		else \
-			gn gen $(BUILD_DIR); \
+			gn gen $(BUILD_DIR) $(IDE) --filters=//chrome --args=$(RELEASE_BUILD_PARAM); \
 		fi \
 	else	\
-		gn gen $(BUILD_DIR); \
+		if [ "Release" == "$(BUILD_TARGET)" ]; then \
+			gn gen $(BUILD_DIR) $(IDE) --filters=//chrome --args=$(RELEASE_BUILD_PARAM); \
+		else \
+			gn gen $(BUILD_DIR) $(IDE) --filters=//chrome; \
+		fi \
 	fi
 	@echo "================= Generate Build File End ==================";
 
@@ -31,7 +35,7 @@ prebuild:
 build_target:
 	@echo "======================= Build Start ========================";
 	@#ninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg) $(MAKE_OPTIONS)
-	autoninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg)
+	ninja -C $(ROOT_DIR)/$(BUILD_DIR) $(tg)
 	@echo "======================== Build End =========================";
 
 build_test:
@@ -51,3 +55,6 @@ clean:
 	rm -rf $(ROOT_DIR)/out
 	@echo "====================== Make Clean End ======================";
 
+output:
+	@echo $(PATH)
+	@echo $(HOME)
