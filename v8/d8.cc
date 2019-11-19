@@ -356,4 +356,58 @@ class DummySourceStream : public v8::ScriptCompiler::ExternalSourceStream {
     bool done_;
 };
 
+class BackgroundCompileThread : public base::Thread {
+  public:
+    BackgroundCompileThread(Isolate* isolate, Local<String> source)
+        : base::Thread(GetThreadOptions("BackgroundCompileThread")),
+          source_(source),
+          streamed_source_(std::make_unique<DummySourceStream>(source, isolate),
+                           v8::ScriptCompiler::StreamedSource::UTF8),
+          task_(v8::ScriptCompiler::StartStreamingScript(isolate, &streamed_source_)) {}
+
+    void Run() { task_->Run(); }
+
+    v8::ScriptCompiler::StreamedSource* streamed_source() {
+      return &streamed_source_;
+    }
+
+  private:
+    Local<String> source_;
+    v8::ScriptCompiler::StreamedSource streamed_source_;
+    std::unique_ptr<v8::ScriptCompiler::ScriptStreamingTask> task_;
+};
+
+ScriptCompiler::CachedData* Shell::LookupCodeCache(Isolate* isolate,
+                                                   Local<Value> source) {
+  base::MutexGuard lock_guard(cached_code_mutex_.Pointer());
+  CHECK(source->IsString());
+  v8::String::Utf8Value key(isolate, source);
+  DCHECK(*key);
+  auto entry = cached_code_map_.find(*key);
+  if (entry != cached_code_map_.end() && entry->second) {
+    int length = entry->second->length;
+    uint8_t* cache = new uint8_t[length];
+    memcpy(cache, entry->second->data, length);
+    ScriptCompiler::CachedData* cached_data = new ScriptCompiler::CachedData(
+        cache, length, ScriptCompiler::CachedData::BufferOwned);
+    return cached_data;
+  }
+  return nullptr;
+}
+
+void Shell::StoreInCodeCache(Isolate* isolate, Local<Value> source,
+                             const ScriptCompiler::CachedData* cache_data) {
+  base::MutexGuard lock_guard(cached_code_mutex_.Pointer());
+  CHECK(source->IsString());
+  if (cache_data == nullptr) return;
+  v8::String::Utf8Value key(isolate, source);
+  DCHECK(*key);
+  int length = cache_data->length;
+  uint8_t* cache = new uint8_t[length];
+  memcpy(cache, cache_data->data, length);
+  cached_code_map_[*key] = std::unique_ptr<ScriptCompiler::CachedData>(
+      new ScriptCompiler::CachedData(cache, length,
+                                     ScriptCompiler::CachedData::BufferOwned));
+}
+
 } // namespace v8
